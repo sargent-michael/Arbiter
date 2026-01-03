@@ -1,0 +1,9 @@
+apiVersion: platform.upsidedown.io/v1alpha1
+kind: TenantNamespace
+metadata:
+  name: tenant-a
+spec:
+  tenantID: ab
+  # targetNamespace: tenant-ab   # optional; defaults to tenant-<tenantID>
+  # adminSubjects: []            # optional
+  # baselinePolicy: {}           # optional

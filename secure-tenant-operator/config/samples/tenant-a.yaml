@@ -1,0 +1,15 @@
+# config/samples/platform_v1alpha1_tenantnamespace.yaml (or a new file)
+apiVersion: platform.upsidedown.io/v1alpha1
+kind: TenantNamespace
+metadata:
+  name: tenant-a
+spec:
+  tenantID: "ab"
+  # targetNamespace: "tenant-ab"  # optional; default is tenant-<tenantID>
+  baselinePolicy:
+    networkIsolation: true
+    resourceQuota: true
+    limitRange: true
+  adminSubjects:
+    - kind: User
+      name: "tenant-a-admin"
