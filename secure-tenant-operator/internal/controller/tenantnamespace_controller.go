@@ -30,11 +30,19 @@ type TenantNamespaceReconciler struct {
 // +kubebuilder:rbac:groups=platform.upsidedown.io,resources=tenantnamespaces,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=platform.upsidedown.io,resources=tenantnamespaces/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=platform.upsidedown.io,resources=tenantnamespaces/finalizers,verbs=update
+
 // Core resources we manage
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="",resources=resourcequotas;limitranges,verbs=get;list;watch;create;update;patch
-// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=roles;rolebindings,verbs=get;list;watch;create;update;patch
-// +kubebuilder:rbac:groups="networking.k8s.io",resources=networkpolicies,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch
+
+// RBAC resources we manage
+// We only create RoleBindings (NOT Roles)
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch
+
+// Needed to reference ClusterRole "admin" in RoleBindings (RBAC bind check)
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,verbs=get;list;watch
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=admin,verbs=bind
 
 func (r *TenantNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
@@ -44,7 +52,6 @@ func (r *TenantNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// Align to your current API: spec.tenantID is the tenant identifier.
 	tenantID := tn.Spec.TenantID
 	if tenantID == "" {
 		log.Info("spec.tenantID is empty; waiting for a valid spec")
@@ -85,7 +92,7 @@ func (r *TenantNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	// 2) Tenant admin RBAC inside namespace
+	// 2) Tenant admin RBAC inside namespace (RoleBinding -> ClusterRole/admin)
 	if err := r.ensureAdminRBAC(ctx, &tn, targetNS); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -171,35 +178,16 @@ func (r *TenantNamespaceReconciler) ensureNamespace(ctx context.Context, tn *pla
 }
 
 func (r *TenantNamespaceReconciler) ensureAdminRBAC(ctx context.Context, tn *platformv1alpha1.TenantNamespace, ns string) error {
-	// Role: admin within the tenant namespace
-	// IMPORTANT: Roles (namespaced) cannot include NonResourceURLs rules.
-	roleName := "tenant-admin"
+	// FIX: Do not create a wildcard Role (that triggers RBAC escalation protection).
+	// Instead, bind tenant admin subjects to the built-in ClusterRole "admin" within this namespace.
+	// This yields namespace-admin power without requiring cluster-admin.
 
-	var role rbacv1.Role
-	err := r.Get(ctx, types.NamespacedName{Name: roleName, Namespace: ns}, &role)
-	if apierrors.IsNotFound(err) {
-		role = rbacv1.Role{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      roleName,
-				Namespace: ns,
-			},
-			Rules: []rbacv1.PolicyRule{
-				// Namespaced admin (MVP). Tighten later if desired.
-				{APIGroups: []string{"*"}, Resources: []string{"*"}, Verbs: []string{"*"}},
-			},
-		}
-		if err := ctrl.SetControllerReference(tn, &role, r.Scheme); err != nil {
-			return err
-		}
-		if err := r.Create(ctx, &role); err != nil {
-			return err
-		}
-	} else if err != nil {
-		return err
+	if len(tn.Spec.AdminSubjects) == 0 {
+		// Nothing to bind; no-op.
+		return nil
 	}
 
-	// RoleBinding: binds the subjects provided in spec.adminSubjects
-	rbName := "tenant-admin-binding"
+	rbName := "tenant-admins"
 
 	desiredSubjects := make([]rbacv1.Subject, 0, len(tn.Spec.AdminSubjects))
 	for _, s := range tn.Spec.AdminSubjects {
@@ -210,7 +198,7 @@ func (r *TenantNamespaceReconciler) ensureAdminRBAC(ctx context.Context, tn *pla
 
 		// APIGroup is required for User/Group; must be empty for ServiceAccount
 		if s.Kind == "User" || s.Kind == "Group" {
-			sub.APIGroup = "rbac.authorization.k8s.io"
+			sub.APIGroup = rbacv1.GroupName // "rbac.authorization.k8s.io"
 		}
 
 		if s.Kind == "ServiceAccount" {
@@ -224,20 +212,25 @@ func (r *TenantNamespaceReconciler) ensureAdminRBAC(ctx context.Context, tn *pla
 	}
 
 	var rb rbacv1.RoleBinding
-	err = r.Get(ctx, types.NamespacedName{Name: rbName, Namespace: ns}, &rb)
+	err := r.Get(ctx, types.NamespacedName{Name: rbName, Namespace: ns}, &rb)
 	if apierrors.IsNotFound(err) {
 		rb = rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      rbName,
 				Namespace: ns,
+				Labels: map[string]string{
+					"app.kubernetes.io/managed-by":  "secure-tenant-operator",
+					"platform.upsidedown.io/tenant": tn.Spec.TenantID,
+				},
 			},
 			RoleRef: rbacv1.RoleRef{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "Role",
-				Name:     roleName,
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "admin",
 			},
 			Subjects: desiredSubjects,
 		}
+		// Cluster-scoped owner -> namespaced dependent is allowed.
 		if err := ctrl.SetControllerReference(tn, &rb, r.Scheme); err != nil {
 			return err
 		}
@@ -246,8 +239,19 @@ func (r *TenantNamespaceReconciler) ensureAdminRBAC(ctx context.Context, tn *pla
 		return err
 	}
 
-	// Drift correction (MVP): overwrite subjects
+	// Drift correction (MVP): overwrite subjects + ensure roleRef stays correct.
 	rb.Subjects = desiredSubjects
+	rb.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.GroupName,
+		Kind:     "ClusterRole",
+		Name:     "admin",
+	}
+	if rb.Labels == nil {
+		rb.Labels = map[string]string{}
+	}
+	rb.Labels["app.kubernetes.io/managed-by"] = "secure-tenant-operator"
+	rb.Labels["platform.upsidedown.io/tenant"] = tn.Spec.TenantID
+
 	return r.Update(ctx, &rb)
 }
 
@@ -274,7 +278,10 @@ func (r *TenantNamespaceReconciler) ensureResourceQuota(ctx context.Context, tn 
 		}
 		return r.Create(ctx, &rq)
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *TenantNamespaceReconciler) ensureLimitRange(ctx context.Context, tn *platformv1alpha1.TenantNamespace, ns string) error {
@@ -306,7 +313,10 @@ func (r *TenantNamespaceReconciler) ensureLimitRange(ctx context.Context, tn *pl
 		}
 		return r.Create(ctx, &lr)
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *TenantNamespaceReconciler) ensureNetworkPolicies(ctx context.Context, tn *platformv1alpha1.TenantNamespace, ns string) error {
