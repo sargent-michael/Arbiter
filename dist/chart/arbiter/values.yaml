@@ -36,6 +36,9 @@ certManager:
   enabled: true
   issuerName: selfsigned-issuer
 
+grafanaDashboard:
+  enabled: true
+
 resources:
   limits:
     cpu: 500m

@@ -1,0 +1,33 @@
+apiVersion: v1
+entries:
+  arbiter:
+  - apiVersion: v2
+    appVersion: 0.0.5
+    created: "2026-01-05T15:47:45.841833-05:00"
+    description: Arbiter enforces tenant namespace baselines in Kubernetes.
+    digest: 87e26d01a072eeb60ed8a71644996176f763bfb9eee85b9012c7690a46c38eea
+    name: arbiter
+    type: application
+    urls:
+    - https://sargent-michael.github.io/arbiter/packages/arbiter-0.1.0.tgz
+    version: 0.1.0
+  arbiter-stack:
+  - apiVersion: v2
+    appVersion: 0.0.5
+    created: "2026-01-05T15:47:45.857168-05:00"
+    dependencies:
+    - name: arbiter
+      repository: file://../arbiter
+      version: 0.1.0
+    - condition: kube-prometheus-stack.enabled
+      name: kube-prometheus-stack
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 61.3.1
+    description: Arbiter plus optional kube-prometheus-stack bootstrap.
+    digest: 4c4b76fa7c90db83efff76e89e6c988df41ca6dff4d3aee78eab2fffe4d18691
+    name: arbiter-stack
+    type: application
+    urls:
+    - https://sargent-michael.github.io/arbiter/packages/arbiter-stack-0.1.0.tgz
+    version: 0.1.0
+generated: "2026-01-05T15:47:45.84133-05:00"
