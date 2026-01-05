@@ -35,17 +35,13 @@ When `spec.baselinePolicy` is enabled, Arbiter applies a consistent baseline to 
 
 ```bash
 kind create cluster --name arbiter-dev --config kind/kind-cluster.yaml
-```
-
-```bash
-kind load docker-image ghcr.io/sargent-michael/arbiter:0.0.2 --name arbiter-dev
-```
-
-```bash
-kubectl apply -k arbiter/config/default
-```
-
-```bash
+helm repo add arbiter https://sargent-michael.github.io/Arbiter/packages
+helm repo update
+helm install arbiter-stack arbiter/arbiter-stack \
+  --namespace arbiter-system \
+  --create-namespace \
+  --set arbiter.image.tag=0.0.5 \
+  --set kube-prometheus-stack.enabled=true
 kubectl apply -f samples/sample1.yaml
 kubectl apply -f samples/sample2.yaml
 ```
@@ -136,32 +132,6 @@ spec:
 
 ---
 
-## Defaulting Webhook
-
-To show default values in `kubectl describe`, Arbiter uses a mutating webhook.
-This requires cert-manager.
-
-Install cert-manager:
-
-```bash
-helm repo add jetstack https://charts.jetstack.io
-helm repo update
-helm install cert-manager jetstack/cert-manager \
-  --namespace cert-manager \
-  --create-namespace \
-  --set crds.enabled=true
-```
-
-Then apply Arbiter (webhook + certs included):
-
-```bash
-kubectl apply -k arbiter/config/default
-```
-
-Re-apply your TenantNamespace resources so defaults are written into the spec.
-
----
-
 ## Metrics
 
 Arbiter exposes Prometheus metrics on the controller manager metrics service.
@@ -176,15 +146,26 @@ Key metrics:
 - `arbiter_reconcile_errors_total` (label: `controller`)
 - `arbiter_reconcile_duration_seconds` (labels: `controller`, `result`)
 
-If you use kube-prometheus-stack, Arbiter ships a ServiceMonitor and a ClusterRoleBinding
-for the Prometheus service account. Apply defaults and verify targets:
+Arbiter ships a ServiceMonitor and a ClusterRoleBinding when installed via Helm.
+Verify targets:
 
 ```bash
-kubectl apply -k arbiter/config/default
 kubectl port-forward -n kube-prometheus-stack svc/kube-prometheus-stack-prometheus 9090:9090
 ```
 
 Open `http://localhost:9090/targets` and confirm the Arbiter target is UP.
+
+---
+
+## Grafana Dashboard
+
+The Helm stack installs the Arbiter dashboard automatically. To view it:
+
+```bash
+kubectl port-forward -n arbiter-system svc/arbiter-stack-grafana 3000:80
+```
+
+Then open `http://localhost:3000` and look for “Arbiter - Reconciliation”.
 
 ---
 
@@ -213,38 +194,22 @@ kubectl arbiter-logs -n arbiter-system --tail=100
 
 ---
 
-## Install kube-prometheus-stack
+## Helm Install
 
 ```bash
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo add arbiter https://sargent-michael.github.io/Arbiter/packages
 helm repo update
-helm install kube-prometheus-stack \
+helm upgrade --install arbiter-stack arbiter/arbiter-stack \
+  --namespace arbiter-system \
   --create-namespace \
-  --namespace kube-prometheus-stack \
-  prometheus-community/kube-prometheus-stack
-```
-
----
-
-## Image and Deploy
-
-```bash
-kubectl apply -k arbiter/config/default
+  --set arbiter.image.tag=0.0.5
 ```
 
 To remove:
 
 ```bash
-kubectl delete -k arbiter/config/default
+helm uninstall arbiter-stack -n arbiter-system
 ```
-
----
-
-## Project Layout
-
-- `arbiter/`: Kubebuilder project and controller code
-- `samples/`: example TenantNamespace specs
-- `kind/`: local cluster config
 
 ---
 

@@ -16,12 +16,19 @@ arbiter:
     enabled: true
   certManager:
     enabled: true
+  grafanaDashboard:
+    enabled: true
 
 kube-prometheus-stack:
   enabled: true
   fullnameOverride: kube-prometheus-stack
   grafana:
     enabled: true
+    sidecar:
+      dashboards:
+        enabled: true
+        label: grafana_dashboard
+        labelValue: "1"
   prometheus:
     prometheusSpec:
       serviceMonitorSelectorNilUsesHelmValues: false

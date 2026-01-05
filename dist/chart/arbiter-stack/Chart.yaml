@@ -7,7 +7,7 @@ appVersion: "0.0.5"
 dependencies:
   - name: arbiter
     version: 0.1.0
-    repository: "file://../arbiter"
+    repository: "https://sargent-michael.github.io/Arbiter/packages"
   - name: kube-prometheus-stack
     version: 61.3.1
     repository: https://prometheus-community.github.io/helm-charts
