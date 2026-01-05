@@ -194,18 +194,7 @@ kubectl arbiter-logs -n arbiter-system --tail=100
 
 ---
 
-## Helm Install
-
-```bash
-helm repo add arbiter https://sargent-michael.github.io/Arbiter/packages
-helm repo update
-helm upgrade --install arbiter-stack arbiter/arbiter-stack \
-  --namespace arbiter-system \
-  --create-namespace \
-  --set arbiter.image.tag=0.0.5
-```
-
-To remove:
+## Uninstall
 
 ```bash
 helm uninstall arbiter-stack -n arbiter-system
