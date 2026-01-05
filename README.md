@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="images/logo.png" alt="Arbiter logo" width="600">
-</p>
-
 # Arbiter
 
 Arbiter is a Kubernetes operator that makes tenant onboarding boring in the best way: declare a tenant once, and Arbiter continuously enforces a secure, repeatable namespace baseline for that tenant.
