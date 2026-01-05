@@ -21,6 +21,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -42,6 +43,21 @@ func (in *BaselinePolicy) DeepCopyInto(out *BaselinePolicy) {
 		in, out := &in.LimitRange, &out.LimitRange
 		*out = new(bool)
 		**out = **in
+	}
+	if in.ResourceQuotaSpec != nil {
+		in, out := &in.ResourceQuotaSpec, &out.ResourceQuotaSpec
+		*out = new(corev1.ResourceQuotaSpec)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.LimitRangeSpec != nil {
+		in, out := &in.LimitRangeSpec, &out.LimitRangeSpec
+		*out = new(corev1.LimitRangeSpec)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.AllowedIngressPorts != nil {
+		in, out := &in.AllowedIngressPorts, &out.AllowedIngressPorts
+		*out = make([]int32, len(*in))
+		copy(*out, *in)
 	}
 }
 

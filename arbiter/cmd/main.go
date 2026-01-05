@@ -173,7 +173,7 @@ func main() {
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "8283ed3e.upsidedown.io",
+		LeaderElectionID:       "8283ed3e.arbiter.io",
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -196,6 +196,11 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "TenantNamespace")
+		os.Exit(1)
+	}
+
+	if err := (&platformv1alpha1.TenantNamespace{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "TenantNamespace")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

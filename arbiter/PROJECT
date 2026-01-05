@@ -3,7 +3,7 @@
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
 cliVersion: 4.10.1
-domain: upsidedown.io
+domain: io
 layout:
 - go.kubebuilder.io/v4
 projectName: arbiter
@@ -13,8 +13,8 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: upsidedown.io
-  group: platform
+  domain: io
+  group: arbiter
   kind: TenantNamespace
   path: github.com/sargent-michael/Kubernetes-Operator/api/v1alpha1
   version: v1alpha1

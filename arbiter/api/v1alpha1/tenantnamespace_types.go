@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -73,6 +75,19 @@ type BaselinePolicy struct {
 	// apply default LimitRange
 	// +optional
 	LimitRange *bool `json:"limitRange,omitempty"`
+
+	// resourceQuotaSpec overrides the default ResourceQuota spec when set.
+	// +optional
+	ResourceQuotaSpec *corev1.ResourceQuotaSpec `json:"resourceQuotaSpec,omitempty"`
+
+	// limitRangeSpec overrides the default LimitRange spec when set.
+	// +optional
+	LimitRangeSpec *corev1.LimitRangeSpec `json:"limitRangeSpec,omitempty"`
+
+	// allowedIngressPorts overrides the default allowed ingress ports (TCP).
+	// If empty, defaults to [443].
+	// +optional
+	AllowedIngressPorts []int32 `json:"allowedIngressPorts,omitempty"`
 }
 
 // TenantNamespaceStatus defines the observed state of TenantNamespace.

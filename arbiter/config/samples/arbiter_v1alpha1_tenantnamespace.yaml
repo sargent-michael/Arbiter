@@ -1,4 +1,4 @@
-apiVersion: platform.upsidedown.io/v1alpha1
+apiVersion: arbiter.io/v1alpha1
 kind: TenantNamespace
 metadata:
   name: tenant-a

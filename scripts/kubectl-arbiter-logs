@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+namespace="${ARBITER_NAMESPACE:-arbiter-system}"
+
+if [[ "${1:-}" == "-n" || "${1:-}" == "--namespace" ]]; then
+  namespace="$2"
+  shift 2
+fi
+
+deployment="$(kubectl get deploy -n "${namespace}" -l app.kubernetes.io/name=arbiter -o name | head -n1)"
+if [[ -z "${deployment}" ]]; then
+  echo "No Arbiter deployment found in namespace: ${namespace}" >&2
+  exit 1
+fi
+
+kubectl logs -n "${namespace}" "${deployment}" -c manager "$@"

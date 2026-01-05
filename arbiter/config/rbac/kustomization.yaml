@@ -18,6 +18,7 @@ resources:
 - metrics_auth_role.yaml
 - metrics_auth_role_binding.yaml
 - metrics_reader_role.yaml
+- metrics_reader_role_binding.yaml
 # For each CRD, "Admin", "Editor" and "Viewer" roles are scaffolded by
 # default, aiding admins in cluster management. Those roles are
 # not used by the arbiter itself. You can comment the following lines
@@ -25,4 +26,3 @@ resources:
 - tenantnamespace_admin_role.yaml
 - tenantnamespace_editor_role.yaml
 - tenantnamespace_viewer_role.yaml
-

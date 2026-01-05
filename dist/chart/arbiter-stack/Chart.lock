@@ -1,0 +1,9 @@
+dependencies:
+- name: arbiter
+  repository: file://../arbiter
+  version: 0.1.0
+- name: kube-prometheus-stack
+  repository: https://prometheus-community.github.io/helm-charts
+  version: 61.3.1
+digest: sha256:576b9950d9ae5fae2ad6506a4583cd84d7b9d537ec8208c4394e7c25c335dd10
+generated: "2026-01-05T14:11:23.576573-05:00"

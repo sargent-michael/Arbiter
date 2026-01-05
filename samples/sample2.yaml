@@ -1,4 +1,4 @@
-apiVersion: platform.upsidedown.io/v1alpha1
+apiVersion: arbiter.io/v1alpha1
 kind: TenantNamespace
 metadata:
   name: upside-down
@@ -25,13 +25,33 @@ spec:
     resourceQuota: true
     limitRange: true
     networkIsolation: true
+    allowedIngressPorts:
+      - 443
+      - 8443
+    resourceQuotaSpec:
+      hard:
+        requests.cpu: "3"
+        requests.memory: 6Gi
+        limits.cpu: "6"
+        limits.memory: 12Gi
+        pods: "75"
+    limitRangeSpec:
+      limits:
+        - type: Container
+          defaultRequest:
+            cpu: 200m
+            memory: 256Mi
+          default:
+            cpu: "1"
+            memory: 1Gi
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: gate-operators
   namespace: hawkins-lab
   labels:
-    platform.upsidedown.io/tenant: upsidedown
+    arbiter.io/tenant: upsidedown
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -47,7 +67,7 @@ metadata:
   name: signal-observers
   namespace: hawkins-lab
   labels:
-    platform.upsidedown.io/tenant: upsidedown
+    arbiter.io/tenant: upsidedown
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

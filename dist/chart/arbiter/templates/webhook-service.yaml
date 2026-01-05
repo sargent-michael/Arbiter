@@ -1,0 +1,17 @@
+{{- if .Values.webhook.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "arbiter.fullname" . }}-webhook-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "arbiter.labels" . | nindent 4 }}
+    control-plane: controller-manager
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 9443
+  selector:
+    {{- include "arbiter.selectorLabels" . | nindent 4 }}
+{{- end -}}
