@@ -37,4 +37,4 @@ kube-prometheus-stack:
 
 cert-manager:
   enabled: true
-  installCRDs: true
+  installCRDs: false

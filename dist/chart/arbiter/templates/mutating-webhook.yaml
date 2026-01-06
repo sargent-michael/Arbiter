@@ -10,7 +10,7 @@ webhooks:
   admissionReviewVersions:
   - v1
   sideEffects: None
-  failurePolicy: Fail
+  failurePolicy: Ignore
   clientConfig:
     service:
       name: {{ include "arbiter.fullname" . }}-webhook-service
