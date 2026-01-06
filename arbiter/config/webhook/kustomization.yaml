@@ -1,3 +1,0 @@
-resources:
-- service.yaml
-- mutating_webhook.yaml

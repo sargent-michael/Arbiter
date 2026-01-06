@@ -1,4 +1,0 @@
-## Append samples of your project ##
-resources:
-- arbiter_v1alpha1_tenantnamespace.yaml
-# +kubebuilder:scaffold:manifestskustomizesamples
