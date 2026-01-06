@@ -1,12 +1,12 @@
 dependencies:
 - name: arbiter
   repository: https://sargent-michael.github.io/Arbiter
-  version: 0.1.0
+  version: 0.1.1
 - name: cert-manager
   repository: https://charts.jetstack.io
   version: v1.15.3
 - name: kube-prometheus-stack
   repository: https://prometheus-community.github.io/helm-charts
   version: 61.3.1
-digest: sha256:718782a3426ec0b66b218cf75f8aa544d289adad5a6c158b0d9e654443b3ac17
-generated: "2026-01-06T13:50:24.623962-05:00"
+digest: sha256:2f1a3b567a14549f116dcbb84931064f272f963255c0a9c4b19c079cf336c17c
+generated: "2026-01-06T15:34:22.630417-05:00"
