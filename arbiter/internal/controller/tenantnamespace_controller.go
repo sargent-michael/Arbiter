@@ -26,7 +26,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -571,7 +570,7 @@ func (r *ProjectReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.LimitRange{}).
 		Owns(&netv1.NetworkPolicy{}).
 		Owns(&rbacv1.RoleBinding{}).
-		Watches(source.Kind(mgr.GetCache(), &platformv1alpha1.Baseline{}), handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, _ client.Object) []reconcile.Request {
+		Watches(&platformv1alpha1.Baseline{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, _ client.Object) []reconcile.Request {
 			var list platformv1alpha1.ProjectList
 			if err := r.List(ctx, &list); err != nil {
 				return nil
