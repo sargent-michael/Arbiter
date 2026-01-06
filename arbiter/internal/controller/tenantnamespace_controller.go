@@ -571,7 +571,7 @@ func (r *ProjectReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.LimitRange{}).
 		Owns(&netv1.NetworkPolicy{}).
 		Owns(&rbacv1.RoleBinding{}).
-		Watches(&source.Kind{Type: &platformv1alpha1.Baseline{}}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, _ client.Object) []reconcile.Request {
+		Watches(source.Kind(mgr.GetCache(), &platformv1alpha1.Baseline{}), handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, _ client.Object) []reconcile.Request {
 			var list platformv1alpha1.ProjectList
 			if err := r.List(ctx, &list); err != nil {
 				return nil
