@@ -33,14 +33,14 @@ type ProjectSpec struct {
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
 	TenantID string `json:"tenantID"`
 
-	// targetNamespace is the namespace name to create/manage. If empty, defaults to "tenant-<tenantID>".
+	// targetNamespace is the namespace name to create/manage. If empty, defaults to "project-<tenantID>".
 	// +kubebuilder:validation:MaxLength=63
 	// +kubebuilder:validation:Pattern=`^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
 	// +optional
 	TargetNamespace string `json:"targetNamespace,omitempty"`
 
 	// targetNamespaces is a list of namespaces to create/manage for this tenant.
-	// If empty, defaults to ["tenant-<tenantID>"].
+	// If empty, defaults to ["project-<tenantID>"].
 	// +optional
 	TargetNamespaces []string `json:"targetNamespaces,omitempty"`
 

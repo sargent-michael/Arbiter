@@ -709,7 +709,7 @@ func collectTargetNamespaces(tn *platformv1alpha1.Project) []string {
 	} else if tn.Spec.TargetNamespace != "" {
 		targets = append(targets, tn.Spec.TargetNamespace)
 	} else if tn.Spec.TenantID != "" {
-		targets = append(targets, fmt.Sprintf("tenant-%s", tn.Spec.TenantID))
+		targets = append(targets, fmt.Sprintf("project-%s", tn.Spec.TenantID))
 	}
 
 	seen := map[string]struct{}{}

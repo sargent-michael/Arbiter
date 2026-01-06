@@ -249,13 +249,13 @@ spec:
                 type: object
               targetNamespace:
                 description: targetNamespace is the namespace name to create/manage.
-                  If empty, defaults to "tenant-<tenantID>".
+                  If empty, defaults to "project-<tenantID>".
                 maxLength: 63
                 pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                 type: string
               targetNamespaces:
                 description: targetNamespaces is a list of namespaces to create/manage
-                  for this tenant. If empty, defaults to ["tenant-<tenantID>"].
+                  for this tenant. If empty, defaults to ["project-<tenantID>"].
                 items:
                   maxLength: 63
                   pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$

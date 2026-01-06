@@ -26,7 +26,7 @@ func (d *ProjectDefaulter) Default(_ context.Context, obj runtime.Object) error 
 	}
 
 	if tn.Spec.TargetNamespace == "" && len(tn.Spec.TargetNamespaces) == 0 {
-		tn.Spec.TargetNamespaces = []string{fmt.Sprintf("tenant-%s", tn.Spec.TenantID)}
+		tn.Spec.TargetNamespaces = []string{fmt.Sprintf("project-%s", tn.Spec.TenantID)}
 	}
 	return nil
 }

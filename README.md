@@ -24,7 +24,7 @@ When `spec.baselinePolicy` is enabled, Arbiter applies a consistent baseline to 
 ## How It Works
 
 1. You create a `Project` resource with a `tenantID` and optional settings.
-2. Arbiter reconciles the target namespace name (defaults to `tenant-<tenantID>`).
+2. Arbiter reconciles the target namespace name (defaults to `project-<tenantID>`).
 3. Arbiter applies baseline RBAC and resource governance.
 4. Arbiter applies network isolation policies (default deny + allow DNS + allow HTTPS ingress).
 5. Arbiter reports status and keeps resources aligned over time.

@@ -2,17 +2,17 @@
 apiVersion: project-arbiter.io/v1alpha1
 kind: Project
 metadata:
-  name: tenant-a
+  name: project-a
 spec:
   tenantID: "ab"
-  # targetNamespace: "tenant-ab"  # optional; default is tenant-<tenantID>
-  # targetNamespaces:             # optional; defaults to ["tenant-<tenantID>"]
-  #   - tenant-ab
-  #   - tenant-ops
+  # targetNamespace: "project-ab"  # optional; default is project-<tenantID>
+  # targetNamespaces:              # optional; defaults to ["project-<tenantID>"]
+  #   - project-ab
+  #   - project-ops
   baselinePolicy:
     networkIsolation: true
     resourceQuota: true
     limitRange: true
   adminSubjects:
     - kind: User
-      name: "tenant-a-admin"
+      name: "project-a-admin"
