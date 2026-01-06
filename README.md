@@ -42,6 +42,7 @@ helm install arbiter-stack arbiter/arbiter-stack \
   --create-namespace \
   --set arbiter.image.tag=0.0.6 \
   --set kube-prometheus-stack.enabled=true
+kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 kubectl apply -f samples/sample1.yaml
 kubectl apply -f samples/sample2.yaml
 ```
