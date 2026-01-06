@@ -194,6 +194,8 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		}
 	}
 
+	original := tn.DeepCopy()
+
 	apimeta.SetStatusCondition(&tn.Status.Conditions, metav1.Condition{
 		Type:               "Available",
 		Status:             metav1.ConditionTrue,
@@ -204,11 +206,15 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	})
 
 	tn.Status.Namespaces = append([]string{}, targetNamespaces...)
+	sort.Strings(tn.Status.Namespaces)
 	tn.Status.ResourceQuotaSummary = summarizeResourceQuota(policy)
 	tn.Status.LimitRangeSummary = summarizeLimitRange(policy)
 	tn.Status.NetworkPolicySummary = summarizeNetworkPolicy(policy)
 
-	if err := r.Status().Update(ctx, &tn); err != nil && !apierrors.IsConflict(err) {
+	if err := r.Status().Patch(ctx, &tn, client.MergeFrom(original)); err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+		}
 		return ctrl.Result{}, err
 	}
 
@@ -735,11 +741,11 @@ func summarizeResourceQuota(policy platformv1alpha1.BaselinePolicy) string {
 	}
 	spec := policy.ResourceQuotaSpec
 	return fmt.Sprintf("cpu:%s/%s mem:%s/%s pods:%s",
-		spec.Hard[corev1.ResourceRequestsCPU].String(),
-		spec.Hard[corev1.ResourceLimitsCPU].String(),
-		spec.Hard[corev1.ResourceRequestsMemory].String(),
-		spec.Hard[corev1.ResourceLimitsMemory].String(),
-		spec.Hard[corev1.ResourcePods].String(),
+		resourceString(spec.Hard, corev1.ResourceRequestsCPU),
+		resourceString(spec.Hard, corev1.ResourceLimitsCPU),
+		resourceString(spec.Hard, corev1.ResourceRequestsMemory),
+		resourceString(spec.Hard, corev1.ResourceLimitsMemory),
+		resourceString(spec.Hard, corev1.ResourcePods),
 	)
 }
 
@@ -751,10 +757,10 @@ func summarizeLimitRange(policy platformv1alpha1.BaselinePolicy) string {
 		return "default"
 	}
 	item := policy.LimitRangeSpec.Limits[0]
-	defCPU := item.Default[corev1.ResourceCPU].String()
-	defMem := item.Default[corev1.ResourceMemory].String()
-	reqCPU := item.DefaultRequest[corev1.ResourceCPU].String()
-	reqMem := item.DefaultRequest[corev1.ResourceMemory].String()
+	defCPU := resourceString(item.Default, corev1.ResourceCPU)
+	defMem := resourceString(item.Default, corev1.ResourceMemory)
+	reqCPU := resourceString(item.DefaultRequest, corev1.ResourceCPU)
+	reqMem := resourceString(item.DefaultRequest, corev1.ResourceMemory)
 	return fmt.Sprintf("req:%s/%s lim:%s/%s", reqCPU, reqMem, defCPU, defMem)
 }
 
@@ -771,4 +777,15 @@ func summarizeNetworkPolicy(policy platformv1alpha1.BaselinePolicy) string {
 	}
 	sort.Strings(ports)
 	return fmt.Sprintf("ingress:%s", strings.Join(ports, ","))
+}
+
+func resourceString(list corev1.ResourceList, name corev1.ResourceName) string {
+	if list == nil {
+		return "-"
+	}
+	quantity, ok := list[name]
+	if !ok {
+		return "-"
+	}
+	return quantity.String()
 }
