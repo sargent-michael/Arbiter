@@ -1,11 +1,14 @@
-# config/samples/arbiter_v1alpha1_tenantnamespace.yaml (or a new file)
-apiVersion: arbiter.io/v1alpha1
-kind: TenantNamespace
+# config/samples/arbiter_v1alpha1_project.yaml (or a new file)
+apiVersion: project-arbiter.io/v1alpha1
+kind: Project
 metadata:
   name: tenant-a
 spec:
   tenantID: "ab"
   # targetNamespace: "tenant-ab"  # optional; default is tenant-<tenantID>
+  # targetNamespaces:             # optional; defaults to ["tenant-<tenantID>"]
+  #   - tenant-ab
+  #   - tenant-ops
   baselinePolicy:
     networkIsolation: true
     resourceQuota: true

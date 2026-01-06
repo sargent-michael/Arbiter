@@ -14,15 +14,24 @@ rules:
   - resourcequotas
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
   - update
   - watch
 - apiGroups:
-  - arbiter.io
+  - project-arbiter.io
   resources:
-  - tenantnamespaces
+  - baselines
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - project-arbiter.io
+  resources:
+  - projects
   verbs:
   - create
   - delete
@@ -32,15 +41,15 @@ rules:
   - update
   - watch
 - apiGroups:
-  - arbiter.io
+  - project-arbiter.io
   resources:
-  - tenantnamespaces/finalizers
+  - projects/finalizers
   verbs:
   - update
 - apiGroups:
-  - arbiter.io
+  - project-arbiter.io
   resources:
-  - tenantnamespaces/status
+  - projects/status
   verbs:
   - get
   - patch
@@ -222,34 +231,34 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "arbiter.fullname" . }}-tenantnamespace-admin-role
+  name: {{ include "arbiter.fullname" . }}-project-admin-role
   labels:
     {{- include "arbiter.labels" . | nindent 4 }}
 rules:
 - apiGroups:
-  - arbiter.io
+  - project-arbiter.io
   resources:
-  - tenantnamespaces
+  - projects
   verbs:
   - '*'
 - apiGroups:
-  - arbiter.io
+  - project-arbiter.io
   resources:
-  - tenantnamespaces/status
+  - projects/status
   verbs:
   - get
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "arbiter.fullname" . }}-tenantnamespace-editor-role
+  name: {{ include "arbiter.fullname" . }}-project-editor-role
   labels:
     {{- include "arbiter.labels" . | nindent 4 }}
 rules:
 - apiGroups:
-  - arbiter.io
+  - project-arbiter.io
   resources:
-  - tenantnamespaces
+  - projects
   verbs:
   - create
   - delete
@@ -259,31 +268,31 @@ rules:
   - update
   - watch
 - apiGroups:
-  - arbiter.io
+  - project-arbiter.io
   resources:
-  - tenantnamespaces/status
+  - projects/status
   verbs:
   - get
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "arbiter.fullname" . }}-tenantnamespace-viewer-role
+  name: {{ include "arbiter.fullname" . }}-project-viewer-role
   labels:
     {{- include "arbiter.labels" . | nindent 4 }}
 rules:
 - apiGroups:
-  - arbiter.io
+  - project-arbiter.io
   resources:
-  - tenantnamespaces
+  - projects
   verbs:
   - get
   - list
   - watch
 - apiGroups:
-  - arbiter.io
+  - project-arbiter.io
   resources:
-  - tenantnamespaces/status
+  - projects/status
   verbs:
   - get
 {{- end }}

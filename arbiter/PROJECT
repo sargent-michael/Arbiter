@@ -14,8 +14,8 @@ resources:
     namespaced: true
   controller: true
   domain: io
-  group: arbiter
-  kind: TenantNamespace
-  path: github.com/sargent-michael/Kubernetes-Operator/api/v1alpha1
+  group: project-arbiter
+  kind: Project
+  path: github.com/sargent-michael/Arbiter/api/v1alpha1
   version: v1alpha1
 version: "3"

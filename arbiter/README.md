@@ -1,6 +1,6 @@
 # Arbiter Operator
 
-Arbiter is the control plane bouncer for tenant namespaces. It watches `TenantNamespace` resources and enforces a strict, repeatable baseline so every tenant starts clean and stays compliant.
+Arbiter is the control plane bouncer for tenant namespaces. It watches `Project` resources and enforces a strict, repeatable baseline so every tenant starts clean and stays compliant.
 
 ## What It Reconciles
 

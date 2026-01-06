@@ -1,5 +1,5 @@
-apiVersion: arbiter.io/v1alpha1
-kind: TenantNamespace
+apiVersion: project-arbiter.io/v1alpha1
+kind: Project
 metadata:
   name: starcourt
 spec:

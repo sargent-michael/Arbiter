@@ -23,6 +23,6 @@ resources:
 # default, aiding admins in cluster management. Those roles are
 # not used by the arbiter itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
-- tenantnamespace_admin_role.yaml
-- tenantnamespace_editor_role.yaml
-- tenantnamespace_viewer_role.yaml
+- project_admin_role.yaml
+- project_editor_role.yaml
+- project_viewer_role.yaml

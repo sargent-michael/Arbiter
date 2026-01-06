@@ -1,12 +1,14 @@
-apiVersion: arbiter.io/v1alpha1
-kind: TenantNamespace
+apiVersion: project-arbiter.io/v1alpha1
+kind: Project
 metadata:
   name: upside-down
 spec:
   tenantID: upsidedown
 
-  # Explicit namespace name (clean + thematic)
-  targetNamespace: hawkins-lab
+  # Explicit namespace names (clean + thematic)
+  targetNamespaces:
+    - hawkins-lab
+    - hawkins-ops
 
   # Full control — “those who cross the gate”
   adminSubjects:
@@ -51,7 +53,7 @@ metadata:
   name: gate-operators
   namespace: hawkins-lab
   labels:
-    arbiter.io/tenant: upsidedown
+    project-arbiter.io/project: upsidedown
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -67,7 +69,7 @@ metadata:
   name: signal-observers
   namespace: hawkins-lab
   labels:
-    arbiter.io/tenant: upsidedown
+    project-arbiter.io/project: upsidedown
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

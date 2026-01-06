@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sort"
+	"strings"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -20,20 +22,25 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/prometheus/client_golang/prometheus"
 
 	platformv1alpha1 "github.com/sargent-michael/Kubernetes-Operator/api/v1alpha1"
 )
 
-type TenantNamespaceReconciler struct {
+type ProjectReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-const tenantNamespaceFinalizer = "arbiter.io/tenantnamespace-cleanup"
+const projectFinalizer = "project-arbiter.io/project-cleanup"
+const projectLabelKey = "project-arbiter.io/project"
+const defaultBaselineName = "default"
 
 var (
 	reconcileTotal = prometheus.NewCounterVec(
@@ -64,12 +71,12 @@ func init() {
 	metrics.Registry.MustRegister(reconcileTotal, reconcileErrors, reconcileDuration)
 }
 
-// +kubebuilder:rbac:groups=arbiter.io,resources=tenantnamespaces,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=arbiter.io,resources=tenantnamespaces/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=arbiter.io,resources=tenantnamespaces/finalizers,verbs=update
+// +kubebuilder:rbac:groups=project-arbiter.io,resources=projects,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=project-arbiter.io,resources=projects/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=project-arbiter.io,resources=projects/finalizers,verbs=update
 
 // Core resources we manage
-// +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=resourcequotas;limitranges,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch
 
@@ -81,34 +88,34 @@ func init() {
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,verbs=get;list;watch
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=admin,verbs=bind
 
-func (r *TenantNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
+func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
 	log := logf.FromContext(ctx)
 	start := time.Now()
 	defer func() {
 		outcome := "success"
 		if err != nil {
 			outcome = "error"
-			reconcileErrors.WithLabelValues("tenantnamespace").Inc()
+			reconcileErrors.WithLabelValues("project").Inc()
 		}
-		reconcileTotal.WithLabelValues("tenantnamespace", outcome).Inc()
-		reconcileDuration.WithLabelValues("tenantnamespace", outcome).Observe(time.Since(start).Seconds())
+		reconcileTotal.WithLabelValues("project", outcome).Inc()
+		reconcileDuration.WithLabelValues("project", outcome).Observe(time.Since(start).Seconds())
 	}()
 
-	var tn platformv1alpha1.TenantNamespace
+	var tn platformv1alpha1.Project
 	if err := r.Get(ctx, req.NamespacedName, &tn); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	if !tn.ObjectMeta.DeletionTimestamp.IsZero() {
-		if controllerutil.ContainsFinalizer(&tn, tenantNamespaceFinalizer) {
-			done, err := r.finalizeTenantNamespace(ctx, &tn)
+		if controllerutil.ContainsFinalizer(&tn, projectFinalizer) {
+			done, err := r.finalizeProject(ctx, &tn)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
 			if !done {
 				return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 			}
-			controllerutil.RemoveFinalizer(&tn, tenantNamespaceFinalizer)
+			controllerutil.RemoveFinalizer(&tn, projectFinalizer)
 			if err := r.Update(ctx, &tn); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -131,59 +138,60 @@ func (r *TenantNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil
 	}
 
-	targetNS := tn.Spec.TargetNamespace
-	if targetNS == "" {
-		targetNS = fmt.Sprintf("tenant-%s", tenantID)
+	targetNamespaces := collectTargetNamespaces(&tn)
+	if len(targetNamespaces) == 0 {
+		log.Info("no target namespaces resolved; waiting for a valid spec")
+		apimeta.SetStatusCondition(&tn.Status.Conditions, metav1.Condition{
+			Type:               "Available",
+			Status:             metav1.ConditionFalse,
+			Reason:             "MissingTargetNamespaces",
+			Message:            "spec.targetNamespaces or spec.targetNamespace must be set",
+			LastTransitionTime: metav1.Now(),
+		})
+		_ = r.Status().Update(ctx, &tn) // best-effort
+		return ctrl.Result{}, nil
 	}
 
-	// Baseline toggles (default true)
-	networkIsolation := true
-	resourceQuota := true
-	limitRange := true
-
-	if tn.Spec.BaselinePolicy.NetworkIsolation != nil {
-		networkIsolation = *tn.Spec.BaselinePolicy.NetworkIsolation
-	}
-	if tn.Spec.BaselinePolicy.ResourceQuota != nil {
-		resourceQuota = *tn.Spec.BaselinePolicy.ResourceQuota
-	}
-	if tn.Spec.BaselinePolicy.LimitRange != nil {
-		limitRange = *tn.Spec.BaselinePolicy.LimitRange
+	policy, err := r.resolveBaselinePolicy(ctx, &tn)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
-	if !controllerutil.ContainsFinalizer(&tn, tenantNamespaceFinalizer) {
-		controllerutil.AddFinalizer(&tn, tenantNamespaceFinalizer)
+	if !controllerutil.ContainsFinalizer(&tn, projectFinalizer) {
+		controllerutil.AddFinalizer(&tn, projectFinalizer)
 		if err := r.Update(ctx, &tn); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
-	// 1) Namespace + labels
-	if err := r.ensureNamespace(ctx, &tn, targetNS, tenantID); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// 2) Tenant admin RBAC inside namespace (RoleBinding -> ClusterRole/admin)
-	if err := r.ensureAdminRBAC(ctx, &tn, targetNS); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// 3) Quotas/limits
-	if resourceQuota {
-		if err := r.ensureResourceQuota(ctx, &tn, targetNS); err != nil {
+	for _, targetNS := range targetNamespaces {
+		// 1) Namespace + labels
+		if err := r.ensureNamespace(ctx, &tn, targetNS, tenantID); err != nil {
 			return ctrl.Result{}, err
 		}
-	}
-	if limitRange {
-		if err := r.ensureLimitRange(ctx, &tn, targetNS); err != nil {
+
+		// 2) Tenant admin RBAC inside namespace (RoleBinding -> ClusterRole/admin)
+		if err := r.ensureAdminRBAC(ctx, &tn, targetNS); err != nil {
 			return ctrl.Result{}, err
 		}
-	}
 
-	// 4) Network policies
-	if networkIsolation {
-		if err := r.ensureNetworkPolicies(ctx, &tn, targetNS); err != nil {
-			return ctrl.Result{}, err
+		// 3) Quotas/limits
+		if policy.ResourceQuota != nil && *policy.ResourceQuota {
+			if err := r.ensureResourceQuota(ctx, &tn, targetNS, policy); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		if policy.LimitRange != nil && *policy.LimitRange {
+			if err := r.ensureLimitRange(ctx, &tn, targetNS, policy); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+
+		// 4) Network policies
+		if policy.NetworkIsolation != nil && *policy.NetworkIsolation {
+			if err := r.ensureNetworkPolicies(ctx, &tn, targetNS, policy); err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 	}
 
@@ -202,31 +210,46 @@ func (r *TenantNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{}, nil
 }
 
-func (r *TenantNamespaceReconciler) finalizeTenantNamespace(ctx context.Context, tn *platformv1alpha1.TenantNamespace) (bool, error) {
-	targetNS := tn.Spec.TargetNamespace
-	if targetNS == "" && tn.Spec.TenantID != "" {
-		targetNS = fmt.Sprintf("tenant-%s", tn.Spec.TenantID)
+func (r *ProjectReconciler) finalizeProject(ctx context.Context, tn *platformv1alpha1.Project) (bool, error) {
+	tenantID := tn.Spec.TenantID
+	targetNamespaces := collectTargetNamespaces(tn)
+	if len(targetNamespaces) == 0 && tenantID != "" {
+		var nsList corev1.NamespaceList
+		if err := r.List(ctx, &nsList, client.MatchingLabels{projectLabelKey: tenantID}); err != nil {
+			return false, err
+		}
+		for _, ns := range nsList.Items {
+			targetNamespaces = append(targetNamespaces, ns.Name)
+		}
 	}
-	if targetNS == "" {
+
+	if len(targetNamespaces) == 0 {
 		return true, nil
 	}
 
-	var ns corev1.Namespace
-	err := r.Get(ctx, types.NamespacedName{Name: targetNS}, &ns)
-	if apierrors.IsNotFound(err) {
-		return true, nil
+	done := true
+	for _, targetNS := range targetNamespaces {
+		var ns corev1.Namespace
+		err := r.Get(ctx, types.NamespacedName{Name: targetNS}, &ns)
+		if apierrors.IsNotFound(err) {
+			continue
+		}
+		if err != nil {
+			return false, err
+		}
+		if ns.DeletionTimestamp != nil {
+			done = false
+			continue
+		}
+		if err := r.Delete(ctx, &ns); err != nil && !apierrors.IsNotFound(err) {
+			return false, err
+		}
+		done = false
 	}
-	if err != nil {
-		return false, err
-	}
-
-	if err := r.Delete(ctx, &ns); err != nil && !apierrors.IsNotFound(err) {
-		return false, err
-	}
-	return false, nil
+	return done, nil
 }
 
-func (r *TenantNamespaceReconciler) ensureNamespace(ctx context.Context, tn *platformv1alpha1.TenantNamespace, nsName, tenantID string) error {
+func (r *ProjectReconciler) ensureNamespace(ctx context.Context, tn *platformv1alpha1.Project, nsName, tenantID string) error {
 	var ns corev1.Namespace
 	err := r.Get(ctx, types.NamespacedName{Name: nsName}, &ns)
 	if apierrors.IsNotFound(err) {
@@ -234,7 +257,7 @@ func (r *TenantNamespaceReconciler) ensureNamespace(ctx context.Context, tn *pla
 			ObjectMeta: metav1.ObjectMeta{
 				Name: nsName,
 				Labels: map[string]string{
-					"arbiter.io/tenant":                  tenantID,
+					projectLabelKey:                             tenantID,
 					"pod-security.kubernetes.io/enforce": "baseline",
 					"pod-security.kubernetes.io/audit":   "baseline",
 					"pod-security.kubernetes.io/warn":    "baseline",
@@ -251,7 +274,7 @@ func (r *TenantNamespaceReconciler) ensureNamespace(ctx context.Context, tn *pla
 	}
 
 	desired := map[string]string{
-		"arbiter.io/tenant":                  tenantID,
+		projectLabelKey:                             tenantID,
 		"pod-security.kubernetes.io/enforce": "baseline",
 		"pod-security.kubernetes.io/audit":   "baseline",
 		"pod-security.kubernetes.io/warn":    "baseline",
@@ -282,7 +305,7 @@ func (r *TenantNamespaceReconciler) ensureNamespace(ctx context.Context, tn *pla
 	return nil
 }
 
-func (r *TenantNamespaceReconciler) ensureAdminRBAC(ctx context.Context, tn *platformv1alpha1.TenantNamespace, ns string) error {
+func (r *ProjectReconciler) ensureAdminRBAC(ctx context.Context, tn *platformv1alpha1.Project, ns string) error {
 	// FIX: Do not create a wildcard Role (that triggers RBAC escalation protection).
 	// Instead, bind tenant admin subjects to the built-in ClusterRole "admin" within this namespace.
 	// This yields namespace-admin power without requiring cluster-admin.
@@ -325,7 +348,7 @@ func (r *TenantNamespaceReconciler) ensureAdminRBAC(ctx context.Context, tn *pla
 				Namespace: ns,
 				Labels: map[string]string{
 					"app.kubernetes.io/managed-by": "arbiter",
-					"arbiter.io/tenant":            tn.Spec.TenantID,
+					projectLabelKey:                      tn.Spec.TenantID,
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -355,16 +378,16 @@ func (r *TenantNamespaceReconciler) ensureAdminRBAC(ctx context.Context, tn *pla
 		rb.Labels = map[string]string{}
 	}
 	rb.Labels["app.kubernetes.io/managed-by"] = "arbiter"
-	rb.Labels["arbiter.io/tenant"] = tn.Spec.TenantID
+	rb.Labels[projectLabelKey] = tn.Spec.TenantID
 
 	return r.Update(ctx, &rb)
 }
 
-func (r *TenantNamespaceReconciler) ensureResourceQuota(ctx context.Context, tn *platformv1alpha1.TenantNamespace, ns string) error {
+func (r *ProjectReconciler) ensureResourceQuota(ctx context.Context, tn *platformv1alpha1.Project, ns string, policy platformv1alpha1.BaselinePolicy) error {
 	name := "tenant-quota"
 	desiredSpec := defaultResourceQuotaSpec()
-	if tn.Spec.BaselinePolicy.ResourceQuotaSpec != nil {
-		desiredSpec = *tn.Spec.BaselinePolicy.ResourceQuotaSpec
+	if policy.ResourceQuotaSpec != nil {
+		desiredSpec = *policy.ResourceQuotaSpec
 	}
 
 	var rq corev1.ResourceQuota
@@ -389,11 +412,11 @@ func (r *TenantNamespaceReconciler) ensureResourceQuota(ctx context.Context, tn 
 	return nil
 }
 
-func (r *TenantNamespaceReconciler) ensureLimitRange(ctx context.Context, tn *platformv1alpha1.TenantNamespace, ns string) error {
+func (r *ProjectReconciler) ensureLimitRange(ctx context.Context, tn *platformv1alpha1.Project, ns string, policy platformv1alpha1.BaselinePolicy) error {
 	name := "tenant-limits"
 	desiredSpec := defaultLimitRangeSpec()
-	if tn.Spec.BaselinePolicy.LimitRangeSpec != nil {
-		desiredSpec = *tn.Spec.BaselinePolicy.LimitRangeSpec
+	if policy.LimitRangeSpec != nil {
+		desiredSpec = *policy.LimitRangeSpec
 	}
 
 	var lr corev1.LimitRange
@@ -418,8 +441,8 @@ func (r *TenantNamespaceReconciler) ensureLimitRange(ctx context.Context, tn *pl
 	return nil
 }
 
-func (r *TenantNamespaceReconciler) ensureNetworkPolicies(ctx context.Context, tn *platformv1alpha1.TenantNamespace, ns string) error {
-	allowedIngressPorts := tn.Spec.BaselinePolicy.AllowedIngressPorts
+func (r *ProjectReconciler) ensureNetworkPolicies(ctx context.Context, tn *platformv1alpha1.Project, ns string, policy platformv1alpha1.BaselinePolicy) error {
+	allowedIngressPorts := policy.AllowedIngressPorts
 	if len(allowedIngressPorts) == 0 {
 		allowedIngressPorts = []int32{443}
 	}
@@ -519,7 +542,7 @@ func defaultLimitRangeSpec() corev1.LimitRangeSpec {
 	}
 }
 
-func (r *TenantNamespaceReconciler) ensureNetworkPolicy(ctx context.Context, owner client.Object, desired *netv1.NetworkPolicy) error {
+func (r *ProjectReconciler) ensureNetworkPolicy(ctx context.Context, owner client.Object, desired *netv1.NetworkPolicy) error {
 	var current netv1.NetworkPolicy
 	key := types.NamespacedName{Name: desired.GetName(), Namespace: desired.GetNamespace()}
 	if err := r.Get(ctx, key, &current); err != nil {
@@ -540,14 +563,143 @@ func (r *TenantNamespaceReconciler) ensureNetworkPolicy(ctx context.Context, own
 	return r.Update(ctx, &current)
 }
 
-func (r *TenantNamespaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ProjectReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&platformv1alpha1.TenantNamespace{}).
+		For(&platformv1alpha1.Project{}).
 		Owns(&corev1.Namespace{}).
 		Owns(&corev1.ResourceQuota{}).
 		Owns(&corev1.LimitRange{}).
 		Owns(&netv1.NetworkPolicy{}).
 		Owns(&rbacv1.RoleBinding{}).
-		Named("tenantnamespace").
+		Watches(&source.Kind{Type: &platformv1alpha1.Baseline{}}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, _ client.Object) []reconcile.Request {
+			var list platformv1alpha1.ProjectList
+			if err := r.List(ctx, &list); err != nil {
+				return nil
+			}
+			requests := make([]reconcile.Request, 0, len(list.Items))
+			for _, item := range list.Items {
+				requests = append(requests, reconcile.Request{
+					NamespacedName: types.NamespacedName{Name: item.Name},
+				})
+			}
+			return requests
+		})).
+		Named("project").
 		Complete(r)
+}
+
+func (r *ProjectReconciler) resolveBaselinePolicy(ctx context.Context, tn *platformv1alpha1.Project) (platformv1alpha1.BaselinePolicy, error) {
+	policy := defaultBaselinePolicy()
+
+	baseline, err := r.getBaseline(ctx)
+	if err != nil {
+		return policy, err
+	}
+	if baseline != nil {
+		policy = mergeBaselinePolicy(policy, baseline.Spec.BaselinePolicy)
+	}
+
+	policy = mergeBaselinePolicy(policy, tn.Spec.BaselinePolicy)
+	policy = normalizeBaselinePolicy(policy)
+	return policy, nil
+}
+
+func (r *ProjectReconciler) getBaseline(ctx context.Context) (*platformv1alpha1.Baseline, error) {
+	var list platformv1alpha1.BaselineList
+	if err := r.List(ctx, &list); err != nil {
+		return nil, err
+	}
+	if len(list.Items) == 0 {
+		return nil, nil
+	}
+	for i := range list.Items {
+		if list.Items[i].Name == defaultBaselineName {
+			return &list.Items[i], nil
+		}
+	}
+	sort.SliceStable(list.Items, func(i, j int) bool {
+		return list.Items[i].Name < list.Items[j].Name
+	})
+	return &list.Items[0], nil
+}
+
+func mergeBaselinePolicy(base platformv1alpha1.BaselinePolicy, override platformv1alpha1.BaselinePolicy) platformv1alpha1.BaselinePolicy {
+	if override.NetworkIsolation != nil {
+		base.NetworkIsolation = override.NetworkIsolation
+	}
+	if override.ResourceQuota != nil {
+		base.ResourceQuota = override.ResourceQuota
+	}
+	if override.LimitRange != nil {
+		base.LimitRange = override.LimitRange
+	}
+	if override.ResourceQuotaSpec != nil {
+		base.ResourceQuotaSpec = override.ResourceQuotaSpec
+	}
+	if override.LimitRangeSpec != nil {
+		base.LimitRangeSpec = override.LimitRangeSpec
+	}
+	if len(override.AllowedIngressPorts) > 0 {
+		base.AllowedIngressPorts = append([]int32{}, override.AllowedIngressPorts...)
+	}
+	return base
+}
+
+func normalizeBaselinePolicy(policy platformv1alpha1.BaselinePolicy) platformv1alpha1.BaselinePolicy {
+	if policy.NetworkIsolation == nil {
+		policy.NetworkIsolation = boolPtr(true)
+	}
+	if policy.ResourceQuota == nil {
+		policy.ResourceQuota = boolPtr(true)
+	}
+	if policy.LimitRange == nil {
+		policy.LimitRange = boolPtr(true)
+	}
+
+	if policy.NetworkIsolation != nil && *policy.NetworkIsolation && len(policy.AllowedIngressPorts) == 0 {
+		policy.AllowedIngressPorts = []int32{443}
+	}
+	if policy.ResourceQuota != nil && *policy.ResourceQuota && policy.ResourceQuotaSpec == nil {
+		spec := defaultResourceQuotaSpec()
+		policy.ResourceQuotaSpec = &spec
+	}
+	if policy.LimitRange != nil && *policy.LimitRange && policy.LimitRangeSpec == nil {
+		spec := defaultLimitRangeSpec()
+		policy.LimitRangeSpec = &spec
+	}
+	return policy
+}
+
+func defaultBaselinePolicy() platformv1alpha1.BaselinePolicy {
+	return normalizeBaselinePolicy(platformv1alpha1.BaselinePolicy{})
+}
+
+func collectTargetNamespaces(tn *platformv1alpha1.Project) []string {
+	var targets []string
+	if len(tn.Spec.TargetNamespaces) > 0 {
+		targets = append(targets, tn.Spec.TargetNamespaces...)
+	} else if tn.Spec.TargetNamespace != "" {
+		targets = append(targets, tn.Spec.TargetNamespace)
+	} else if tn.Spec.TenantID != "" {
+		targets = append(targets, fmt.Sprintf("tenant-%s", tn.Spec.TenantID))
+	}
+
+	seen := map[string]struct{}{}
+	unique := make([]string, 0, len(targets))
+	for _, ns := range targets {
+		ns = strings.TrimSpace(ns)
+		if ns == "" {
+			continue
+		}
+		if _, ok := seen[ns]; ok {
+			continue
+		}
+		seen[ns] = struct{}{}
+		unique = append(unique, ns)
+	}
+	return unique
+}
+
+func boolPtr(v bool) *bool {
+	return &v
 }

@@ -51,9 +51,8 @@ const banner = `
    /   |  _____/ /_   (_) /____  _____
   / /| | / ___/ __ \ / / __/ _ \/ ___/
  / ___ |/ /  / /_/ // / /_/  __/ /    
-/_/  |_/_/  /_.___//_/\__/\___/_/     
---------------------------------------
-Created by: github.com/sargent-michael
+/_/  |_/_/  /_.___//_/\__/\___/_/ v1.0.0    
+-----------------------------------------
 
 `
 
@@ -173,7 +172,7 @@ func main() {
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "8283ed3e.arbiter.io",
+		LeaderElectionID:       "8283ed3e.project-arbiter.io",
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -191,16 +190,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := (&controller.TenantNamespaceReconciler{
+	if err := (&controller.ProjectReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "TenantNamespace")
+		setupLog.Error(err, "unable to create controller", "controller", "Project")
 		os.Exit(1)
 	}
 
-	if err := (&platformv1alpha1.TenantNamespace{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "TenantNamespace")
+	if err := (&platformv1alpha1.Project{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "Project")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

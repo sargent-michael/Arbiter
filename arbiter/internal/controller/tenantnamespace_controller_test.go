@@ -30,7 +30,7 @@ import (
 	platformv1alpha1 "github.com/sargent-michael/Kubernetes-Operator/api/v1alpha1"
 )
 
-var _ = Describe("TenantNamespace Controller", func() {
+var _ = Describe("Project Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
@@ -40,13 +40,13 @@ var _ = Describe("TenantNamespace Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		tenantnamespace := &platformv1alpha1.TenantNamespace{}
+		project := &platformv1alpha1.Project{}
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind TenantNamespace")
-			err := k8sClient.Get(ctx, typeNamespacedName, tenantnamespace)
+			By("creating the custom resource for the Kind Project")
+			err := k8sClient.Get(ctx, typeNamespacedName, project)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &platformv1alpha1.TenantNamespace{
+				resource := &platformv1alpha1.Project{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -59,16 +59,16 @@ var _ = Describe("TenantNamespace Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &platformv1alpha1.TenantNamespace{}
+			resource := &platformv1alpha1.Project{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Cleanup the specific resource instance TenantNamespace")
+			By("Cleanup the specific resource instance Project")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
-			controllerReconciler := &TenantNamespaceReconciler{
+			controllerReconciler := &ProjectReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}

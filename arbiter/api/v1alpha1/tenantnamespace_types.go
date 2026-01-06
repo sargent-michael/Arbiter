@@ -25,8 +25,8 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// TenantNamespaceSpec defines the desired state of TenantNamespace
-type TenantNamespaceSpec struct {
+// ProjectSpec defines the desired state of Project
+type ProjectSpec struct {
 	// tenantID is the stable identifier for the tenant (used for labels, naming, etc.)
 	// +kubebuilder:validation:MinLength=2
 	// +kubebuilder:validation:MaxLength=63
@@ -38,6 +38,11 @@ type TenantNamespaceSpec struct {
 	// +kubebuilder:validation:Pattern=`^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
 	// +optional
 	TargetNamespace string `json:"targetNamespace,omitempty"`
+
+	// targetNamespaces is a list of namespaces to create/manage for this tenant.
+	// If empty, defaults to ["tenant-<tenantID>"].
+	// +optional
+	TargetNamespaces []string `json:"targetNamespaces,omitempty"`
 
 	// adminSubjects grants admin access inside the tenant namespace.
 	// These are RBAC subjects (users, groups, serviceaccounts).
@@ -90,32 +95,32 @@ type BaselinePolicy struct {
 	AllowedIngressPorts []int32 `json:"allowedIngressPorts,omitempty"`
 }
 
-// TenantNamespaceStatus defines the observed state of TenantNamespace.
-type TenantNamespaceStatus struct {
+// ProjectStatus defines the observed state of Project.
+type ProjectStatus struct {
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// +kubebuilder:resource:scope=Cluster,shortName=tns
+// +kubebuilder:resource:scope=Cluster,shortName=proj
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-type TenantNamespace struct {
+type Project struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   TenantNamespaceSpec   `json:"spec"`
-	Status TenantNamespaceStatus `json:"status,omitempty"`
+	Spec   ProjectSpec   `json:"spec"`
+	Status ProjectStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
 // +kubebuilder:object:root=true
-type TenantNamespaceList struct {
+type ProjectList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []TenantNamespace `json:"items"`
+	Items           []Project `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&TenantNamespace{}, &TenantNamespaceList{})
+	SchemeBuilder.Register(&Project{}, &ProjectList{})
 }

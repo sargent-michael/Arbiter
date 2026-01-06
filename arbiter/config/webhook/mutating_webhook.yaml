@@ -5,7 +5,7 @@ metadata:
   annotations:
     cert-manager.io/inject-ca-from: system/serving-cert
 webhooks:
-- name: mtenantnamespace.arbiter.io
+- name: mproject.project-arbiter.io
   admissionReviewVersions:
   - v1
   sideEffects: None
@@ -14,15 +14,15 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-arbiter-io-v1alpha1-tenantnamespace
+      path: /mutate-project-arbiter-io-v1alpha1-project
   rules:
   - apiGroups:
-    - arbiter.io
+    - project-arbiter.io
     apiVersions:
     - v1alpha1
     operations:
     - CREATE
     - UPDATE
     resources:
-    - tenantnamespaces
+    - projects
     scope: "*"

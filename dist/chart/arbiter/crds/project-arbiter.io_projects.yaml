@@ -4,16 +4,16 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.19.0
-  name: tenantnamespaces.arbiter.io
+  name: projects.project-arbiter.io
 spec:
-  group: arbiter.io
+  group: project-arbiter.io
   names:
-    kind: TenantNamespace
-    listKind: TenantNamespaceList
-    plural: tenantnamespaces
+    kind: Project
+    listKind: ProjectList
+    plural: projects
     shortNames:
-    - tns
-    singular: tenantnamespace
+    - proj
+    singular: project
   scope: Cluster
   versions:
   - name: v1alpha1
@@ -38,7 +38,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: TenantNamespaceSpec defines the desired state of TenantNamespace
+            description: ProjectSpec defines the desired state of Project
             properties:
               adminSubjects:
                 description: |-
@@ -237,6 +237,15 @@ spec:
                 maxLength: 63
                 pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                 type: string
+              targetNamespaces:
+                description: targetNamespaces is a list of namespaces to create/manage
+                  for this tenant. If empty, defaults to ["tenant-<tenantID>"].
+                items:
+                  maxLength: 63
+                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                  type: string
+                type: array
+                x-kubernetes-list-type: atomic
               tenantID:
                 description: tenantID is the stable identifier for the tenant (used
                   for labels, naming, etc.)
@@ -248,7 +257,7 @@ spec:
             - tenantID
             type: object
           status:
-            description: TenantNamespaceStatus defines the observed state of TenantNamespace.
+            description: ProjectStatus defines the observed state of Project.
             properties:
               conditions:
                 items:

@@ -2,7 +2,7 @@
 
 Arbiter is a Kubernetes operator that makes tenant onboarding boring in the best way: declare a tenant once, and Arbiter continuously enforces a secure, repeatable namespace baseline for that tenant.
 
-It watches the `TenantNamespace` custom resource and reconciles the required resources so your platform stays compliant even as drift happens.
+It watches the `Project` custom resource and reconciles the required resources so your platform stays compliant even as drift happens.
 
 ---
 
@@ -23,7 +23,7 @@ When `spec.baselinePolicy` is enabled, Arbiter applies a consistent baseline to 
 
 ## How It Works
 
-1. You create a `TenantNamespace` resource with a `tenantID` and optional settings.
+1. You create a `Project` resource with a `tenantID` and optional settings.
 2. Arbiter reconciles the target namespace name (defaults to `tenant-<tenantID>`).
 3. Arbiter applies baseline RBAC and resource governance.
 4. Arbiter applies network isolation policies (default deny + allow DNS + allow HTTPS ingress).
@@ -35,12 +35,12 @@ When `spec.baselinePolicy` is enabled, Arbiter applies a consistent baseline to 
 
 ```bash
 kind create cluster --name arbiter-dev --config kind/kind-cluster.yaml
-helm repo add arbiter https://sargent-michael.github.io/Arbiter/packages
+helm repo add arbiter https://sargent-michael.github.io/Arbiter
 helm repo update
 helm install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=0.0.6 \
+  --set arbiter.image.tag=1.0.0 \
   --set kube-prometheus-stack.enabled=true
 kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 kubectl apply -f samples/sample1.yaml
@@ -51,16 +51,19 @@ The stack chart installs cert-manager, Prometheus, and Arbiter in one shot.
 
 ---
 
-## TenantNamespace CRD
+## Project CRD
 
 ```yaml
-apiVersion: arbiter.io/v1alpha1
-kind: TenantNamespace
+apiVersion: project-arbiter.io/v1alpha1
+kind: Project
 metadata:
   name: hawkins
 spec:
   tenantID: "hawkins"
   # targetNamespace: hawkins-lab
+  # targetNamespaces:
+  #   - hawkins-lab
+  #   - hawkins-ops
   adminSubjects:
     - kind: Group
       name: hellfire-club
@@ -88,11 +91,32 @@ spec:
 
 - `spec.tenantID`: Stable tenant identifier (required)
 - `spec.targetNamespace`: Explicit namespace name override (optional)
+- `spec.targetNamespaces`: List of namespaces managed for the tenant (optional)
 - `spec.adminSubjects`: RBAC subjects granted admin access in the tenant namespace
 - `spec.baselinePolicy`: Toggles for baseline enforcement
 - `spec.baselinePolicy.resourceQuotaSpec`: Override default ResourceQuota spec
 - `spec.baselinePolicy.limitRangeSpec`: Override default LimitRange spec
 - `spec.baselinePolicy.allowedIngressPorts`: Override allowed ingress TCP ports
+
+---
+
+## Baseline Defaults
+
+Define a cluster-wide Baseline to set the default policy for every tenant. Tenants can override any field
+in their own `baselinePolicy`.
+
+```yaml
+apiVersion: project-arbiter.io/v1alpha1
+kind: Baseline
+metadata:
+  name: default
+spec:
+  baselinePolicy:
+    networkIsolation: true
+    resourceQuota: true
+    limitRange: true
+    allowedIngressPorts: [443]
+```
 
 ---
 
@@ -107,8 +131,8 @@ kubectl apply -f samples/sample2.yaml
 Or inline:
 
 ```yaml
-apiVersion: arbiter.io/v1alpha1
-kind: TenantNamespace
+apiVersion: project-arbiter.io/v1alpha1
+kind: Project
 metadata:
   name: starcourt
 spec:
@@ -174,12 +198,13 @@ Then open `http://localhost:3000` and look for “Arbiter - Reconciliation”.
 
 ## CLI Shortcuts
 
-The TenantNamespace CRD includes a short name, so you can use:
+The Project CRD includes a short name, so you can use:
 
 ```bash
-kubectl get tns
-kubectl get tns <tenant>
-kubectl delete tns <tenant>
+kubectl get projects
+kubectl get proj
+kubectl get proj <project>
+kubectl delete proj <project>
 ```
 
 To tail Arbiter logs with `kubectl arbiter-logs`, add the plugin script to your PATH:
@@ -200,12 +225,12 @@ kubectl arbiter-logs -n arbiter-system --tail=100
 ## Helm Install
 
 ```bash
-helm repo add arbiter https://sargent-michael.github.io/Arbiter/packages
+helm repo add arbiter https://sargent-michael.github.io/Arbiter
 helm repo update
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=0.0.6
+  --set arbiter.image.tag=1.0.0
 ```
 
 To remove:
