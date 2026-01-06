@@ -1,5 +1,6 @@
 apiVersion: project-arbiter.io/v1alpha1
 kind: Baseline
+# Hawkins default baseline for the whole cluster.
 metadata:
   name: default
 spec:

@@ -1,0 +1,47 @@
+apiVersion: project-arbiter.io/v1alpha1
+kind: Project
+metadata:
+  name: mind-flayer
+spec:
+  projectID: mind-flayer
+
+  # Multiple namespaces managed by a single project.
+  targetNamespaces:
+    - creel-house
+    - surfer-boy
+    - byers-house
+
+  adminSubjects:
+    - kind: Group
+      name: rift-keepers
+    - kind: User
+      name: max@hawkins.local
+    - kind: ServiceAccount
+      name: shadow-bot
+      namespace: creel-house
+
+  # Full-policy override example with multiple ingress ports.
+  baselinePolicy:
+    resourceQuota: true
+    limitRange: true
+    networkIsolation: true
+    allowedIngressPorts:
+      - 80
+      - 443
+      - 8443
+    resourceQuotaSpec:
+      hard:
+        requests.cpu: "5"
+        requests.memory: 10Gi
+        limits.cpu: "10"
+        limits.memory: 20Gi
+        pods: "150"
+    limitRangeSpec:
+      limits:
+        - type: Container
+          defaultRequest:
+            cpu: 300m
+            memory: 512Mi
+          default:
+            cpu: "2"
+            memory: 2Gi

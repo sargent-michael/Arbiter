@@ -1,1 +1,8 @@
 notes.md
+.DS_Store
+.env
+*.log
+tmp/
+packages/
+dist/packages/
+dist/chart/arbiter-stack/charts/

@@ -249,28 +249,28 @@ spec:
                 type: object
               targetNamespace:
                 description: targetNamespace is the namespace name to create/manage.
-                  If empty, defaults to "project-<tenantID>".
+                  If empty, defaults to "project-<projectID>".
                 maxLength: 63
                 pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                 type: string
               targetNamespaces:
                 description: targetNamespaces is a list of namespaces to create/manage
-                  for this tenant. If empty, defaults to ["project-<tenantID>"].
+                  for this project. If empty, defaults to ["project-<projectID>"].
                 items:
                   maxLength: 63
                   pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                   type: string
                 type: array
                 x-kubernetes-list-type: atomic
-              tenantID:
-                description: tenantID is the stable identifier for the tenant (used
+              projectID:
+                description: projectID is the stable identifier for the project (used
                   for labels, naming, etc.)
                 maxLength: 63
                 minLength: 2
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                 type: string
             required:
-            - tenantID
+            - projectID
             type: object
           status:
             description: ProjectStatus defines the observed state of Project.

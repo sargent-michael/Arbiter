@@ -1,53 +1,75 @@
 # Arbiter
 
-Arbiter is a Kubernetes operator that makes tenant onboarding boring in the best way: declare a tenant once, and Arbiter continuously enforces a secure, repeatable namespace baseline for that tenant.
+```
+    ___        _     _ _            
+   / _ \ _   _| |__ (_) |___  _ __  
+  | | | | | | | '_ \| | / __|| '_ \ 
+  | |_| | |_| | |_) | | \__ \| | | |
+   \__\_\\__,_|_.__/|_|_|___/|_| |_|
+```
 
-It watches the `Project` custom resource and reconciles the required resources so your platform stays compliant even as drift happens.
-
----
-
-## What Arbiter Enforces
-
-When `spec.baselinePolicy` is enabled, Arbiter applies a consistent baseline to the tenant namespace:
-
-- Namespace creation and labeling
-- Admin RBAC RoleBinding inside the tenant namespace
-- ResourceQuota defaults (CPU/memory/pod limits)
-- LimitRange defaults (container requests/limits)
-- NetworkPolicy defaults:
-  - Default deny ingress and egress
-  - Allow DNS egress to kube-dns
-  - Allow HTTPS ingress on TCP/443
+Arbiter is a Kubernetes operator that turns project onboarding into a single, repeatable declaration.
+You define a `Project`, and Arbiter enforces namespaces, RBAC, quotas, limits, and network policy
+with continuous reconciliation.
 
 ---
 
-## How It Works
+## Highlights
 
-1. You create a `Project` resource with a `tenantID` and optional settings.
-2. Arbiter reconciles the target namespace name (defaults to `project-<tenantID>`).
-3. Arbiter applies baseline RBAC and resource governance.
-4. Arbiter applies network isolation policies (default deny + allow DNS + allow HTTPS ingress).
-5. Arbiter reports status and keeps resources aligned over time.
+- Multi-namespace projects with deterministic naming (`project-<projectID>` by default)
+- Global Baseline with per-project overrides for quotas, limits, and network policy
+- Status summaries in `kubectl get proj` for fast validation
+- Helm stack installs cert-manager, Prometheus, Grafana, and Arbiter together
+- Metrics and dashboards included out of the box
 
 ---
 
-## Quick Start (Kind)
+## Quickstart
+
+<div>
+<details open>
+<summary>Helm (Kind)</summary>
 
 ```bash
 kind create cluster --name arbiter-dev --config kind/kind-cluster.yaml
 helm repo add arbiter https://sargent-michael.github.io/Arbiter
 helm repo update
-helm install arbiter-stack arbiter/arbiter-stack \
+helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.0 \
+  --set arbiter.image.tag=<version> \
   --set kube-prometheus-stack.enabled=true
 kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
-kubectl apply -f samples/sample1.yaml
-kubectl apply -f samples/sample2.yaml
 ```
 
-The stack chart installs cert-manager, Prometheus, and Arbiter in one shot.
+Then apply samples:
+
+```bash
+kubectl apply -f samples/baseline.yaml
+kubectl apply -f samples/sample1.yaml
+kubectl apply -f samples/sample2.yaml
+kubectl apply -f samples/sample3.yaml
+kubectl apply -f samples/sample4.yaml
+```
+
+</details>
+
+<details>
+<summary>Helm (Existing Cluster)</summary>
+
+```bash
+helm repo add arbiter https://sargent-michael.github.io/Arbiter
+helm repo update
+helm upgrade --install arbiter-stack arbiter/arbiter-stack \
+  --namespace arbiter-system \
+  --create-namespace \
+  --set arbiter.image.tag=<version>
+
+kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
+```
+
+</details>
+</div>
 
 ---
 
@@ -59,8 +81,8 @@ kind: Project
 metadata:
   name: hawkins
 spec:
-  tenantID: "hawkins"
-  # targetNamespace: hawkins-lab
+  projectID: "hawkins"
+  # targetNamespace: project-hawkins
   # targetNamespaces:
   #   - hawkins-lab
   #   - hawkins-ops
@@ -89,21 +111,15 @@ spec:
 
 ### Key Fields
 
-- `spec.tenantID`: Stable tenant identifier (required)
-- `spec.targetNamespace`: Explicit namespace name override (optional)
-- `spec.targetNamespaces`: List of namespaces managed for the tenant (optional)
-- `spec.adminSubjects`: RBAC subjects granted admin access in the tenant namespace
-- `spec.baselinePolicy`: Toggles for baseline enforcement
-- `spec.baselinePolicy.resourceQuotaSpec`: Override default ResourceQuota spec
-- `spec.baselinePolicy.limitRangeSpec`: Override default LimitRange spec
-- `spec.baselinePolicy.allowedIngressPorts`: Override allowed ingress TCP ports
+- `spec.projectID`: Stable project identifier (required)
+- `spec.targetNamespace`: Explicit namespace override (optional)
+- `spec.targetNamespaces`: List of namespaces managed for the project (optional)
+- `spec.adminSubjects`: RBAC subjects granted admin access
+- `spec.baselinePolicy`: Toggle and override baseline enforcement
 
 ---
 
 ## Baseline Defaults
-
-Define a cluster-wide Baseline to set the default policy for every tenant. Tenants can override any field
-in their own `baselinePolicy`.
 
 ```yaml
 apiVersion: project-arbiter.io/v1alpha1
@@ -120,85 +136,32 @@ spec:
 
 ---
 
-## Apply Overrides
+## Samples (Stranger Things)
 
-Example with overrides:
-
-```bash
-kubectl apply -f samples/sample2.yaml
-```
-
-Or inline:
-
-```yaml
-apiVersion: project-arbiter.io/v1alpha1
-kind: Project
-metadata:
-  name: starcourt
-spec:
-  tenantID: "starcourt"
-  baselinePolicy:
-    allowedIngressPorts: [443, 8443]
-    resourceQuotaSpec:
-      hard:
-        requests.cpu: "3"
-        requests.memory: 6Gi
-        limits.cpu: "6"
-        limits.memory: 12Gi
-        pods: "75"
-    limitRangeSpec:
-      limits:
-        - type: Container
-          defaultRequest:
-            cpu: 200m
-            memory: 256Mi
-          default:
-            cpu: "1"
-            memory: 1Gi
-```
+- `samples/sample1.yaml`: simple Project with defaults (Starcourt)
+- `samples/sample2.yaml`: overrides + extra RoleBindings (Upside Down)
+- `samples/sample3.yaml`: multi-namespace project (Hawkins R&D)
+- `samples/sample4.yaml`: multi-namespace + multiple ingress ports
 
 ---
 
-## Metrics
+## Observability
 
-Arbiter exposes Prometheus metrics on the controller manager metrics service.
-
-```bash
-kubectl get svc -n arbiter-system arbiter-controller-manager-metrics-service
-```
-
-Key metrics:
-
-- `arbiter_reconcile_total` (labels: `controller`, `result`)
-- `arbiter_reconcile_errors_total` (label: `controller`)
-- `arbiter_reconcile_duration_seconds` (labels: `controller`, `result`)
-
-Arbiter ships a ServiceMonitor and a ClusterRoleBinding when installed via Helm.
-Verify targets:
+Metrics are exposed on the controller manager metrics service.
 
 ```bash
-kubectl port-forward -n kube-prometheus-stack svc/kube-prometheus-stack-prometheus 9090:9090
+kubectl get svc -n arbiter-system arbiter-stack-controller-manager-metrics-service
 ```
 
-Open `http://localhost:9090/targets` and confirm the Arbiter target is UP.
-
----
-
-## Grafana Dashboard
-
-The Helm stack installs the Arbiter dashboard automatically. To view it:
+Grafana dashboard is installed by the stack chart:
 
 ```bash
 kubectl port-forward -n arbiter-system svc/arbiter-stack-grafana 3000:80
 ```
 
-Then open `http://localhost:3000` and look for “Arbiter - Reconciliation”.
-
 ---
 
 ## CLI Shortcuts
-
-The Project CRD includes a short name, so you can use:
 
 ```bash
 kubectl get projects
@@ -207,40 +170,29 @@ kubectl get proj <project>
 kubectl delete proj <project>
 ```
 
-To tail Arbiter logs with `kubectl arbiter-logs`, add the plugin script to your PATH:
+Arbiter logs via kubectl plugin:
 
 ```bash
 export PATH="$PATH:$(pwd)/scripts"
-```
-
-Then run:
-
-```bash
-kubectl arbiter-logs
-kubectl arbiter-logs -n arbiter-system --tail=100
+kubectl arbiter-logs -n arbiter-system --tail=200
 ```
 
 ---
 
-## Helm Install
+## DevSecOps Pipeline
 
-```bash
-helm repo add arbiter https://sargent-michael.github.io/Arbiter
-helm repo update
-helm upgrade --install arbiter-stack arbiter/arbiter-stack \
-  --namespace arbiter-system \
-  --create-namespace \
-  --set arbiter.image.tag=1.0.0
-```
+This repo ships with automated security checks:
 
-To remove:
+- CodeQL (code scanning)
+- Govulncheck (Go vulnerability DB)
+- Gosec (Go SAST)
+- Trivy (filesystem + image scanning)
+- Dependency Review (PR guardrails)
+
+---
+
+## Uninstall
 
 ```bash
 helm uninstall arbiter-stack -n arbiter-system
 ```
-
----
-
-## License
-
-Apache 2.0. See `LICENSE` for details.

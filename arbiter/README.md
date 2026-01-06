@@ -1,11 +1,13 @@
 # Arbiter Operator
 
-Arbiter is the control plane bouncer for tenant namespaces. It watches `Project` resources and enforces a strict, repeatable baseline so every tenant starts clean and stays compliant.
+Arbiter is a control plane operator for projects and namespaces. It watches `Project`
+resources and enforces a strict, repeatable baseline so every project starts clean
+and stays compliant.
 
 ## What It Reconciles
 
 - Namespace creation + labeling
-- Admin RBAC RoleBinding inside the tenant namespace
+- Admin RBAC RoleBinding inside project namespaces
 - ResourceQuota defaults
 - LimitRange defaults
 - NetworkPolicy defaults:
@@ -15,7 +17,7 @@ Arbiter is the control plane bouncer for tenant namespaces. It watches `Project`
 
 ## Overrides
 
-Per-tenant overrides can be set in `spec.baselinePolicy`:
+Per-project overrides can be set in `spec.baselinePolicy`:
 
 - `resourceQuotaSpec` to replace the default ResourceQuota
 - `limitRangeSpec` to replace the default LimitRange

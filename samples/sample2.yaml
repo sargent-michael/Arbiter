@@ -3,7 +3,7 @@ kind: Project
 metadata:
   name: upside-down
 spec:
-  tenantID: upsidedown
+  projectID: upsidedown
 
   # Explicit namespace names (clean + thematic)
   targetNamespaces:

@@ -3,7 +3,7 @@ kind: Project
 metadata:
   name: starcourt
 spec:
-  tenantID: starcourt
+  projectID: starcourt
 
   # Defaults apply (namespace name, baseline controls)
   adminSubjects:

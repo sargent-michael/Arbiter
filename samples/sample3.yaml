@@ -1,21 +1,21 @@
 apiVersion: project-arbiter.io/v1alpha1
 kind: Project
 metadata:
-  name: hq-ops
+  name: hawkins-rd
 spec:
-  tenantID: hq-ops
+  projectID: hawkins-rd
 
   # Multiple namespaces managed by a single project.
   targetNamespaces:
-    - hq-core
-    - hq-platform
-    - hq-observability
+    - hawkins-rd
+    - starcourt-mall
+    - radio-room
 
   adminSubjects:
     - kind: Group
-      name: operations
+      name: hawkins-lab-ops
     - kind: User
-      name: chief@arbiter.local
+      name: hopper@hawkins.local
 
   # Per-project overrides on top of the Baseline defaults.
   baselinePolicy:

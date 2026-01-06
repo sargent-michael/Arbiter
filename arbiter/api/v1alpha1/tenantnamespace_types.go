@@ -27,20 +27,20 @@ import (
 
 // ProjectSpec defines the desired state of Project
 type ProjectSpec struct {
-	// tenantID is the stable identifier for the tenant (used for labels, naming, etc.)
+	// projectID is the stable identifier for the project (used for labels, naming, etc.)
 	// +kubebuilder:validation:MinLength=2
 	// +kubebuilder:validation:MaxLength=63
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
-	TenantID string `json:"tenantID"`
+	ProjectID string `json:"projectID"`
 
-	// targetNamespace is the namespace name to create/manage. If empty, defaults to "project-<tenantID>".
+	// targetNamespace is the namespace name to create/manage. If empty, defaults to "project-<projectID>".
 	// +kubebuilder:validation:MaxLength=63
 	// +kubebuilder:validation:Pattern=`^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
 	// +optional
 	TargetNamespace string `json:"targetNamespace,omitempty"`
 
 	// targetNamespaces is a list of namespaces to create/manage for this tenant.
-	// If empty, defaults to ["project-<tenantID>"].
+	// If empty, defaults to ["project-<projectID>"].
 	// +optional
 	TargetNamespaces []string `json:"targetNamespaces,omitempty"`
 

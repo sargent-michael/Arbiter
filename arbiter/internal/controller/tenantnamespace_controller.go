@@ -122,15 +122,15 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		return ctrl.Result{}, nil
 	}
 
-	tenantID := tn.Spec.TenantID
-	if tenantID == "" {
-		log.Info("spec.tenantID is empty; waiting for a valid spec")
+	projectID := tn.Spec.ProjectID
+	if projectID == "" {
+		log.Info("spec.projectID is empty; waiting for a valid spec")
 
 		apimeta.SetStatusCondition(&tn.Status.Conditions, metav1.Condition{
 			Type:               "Available",
 			Status:             metav1.ConditionFalse,
-			Reason:             "MissingTenantID",
-			Message:            "spec.tenantID must be set",
+			Reason:             "MissingProjectID",
+			Message:            "spec.projectID must be set",
 			LastTransitionTime: metav1.Now(),
 		})
 		_ = r.Status().Update(ctx, &tn) // best-effort
@@ -165,7 +165,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 
 	for _, targetNS := range targetNamespaces {
 		// 1) Namespace + labels
-		if err := r.ensureNamespace(ctx, &tn, targetNS, tenantID); err != nil {
+		if err := r.ensureNamespace(ctx, &tn, targetNS, projectID); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -222,11 +222,11 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 }
 
 func (r *ProjectReconciler) finalizeProject(ctx context.Context, tn *platformv1alpha1.Project) (bool, error) {
-	tenantID := tn.Spec.TenantID
+	projectID := tn.Spec.ProjectID
 	targetNamespaces := collectTargetNamespaces(tn)
-	if len(targetNamespaces) == 0 && tenantID != "" {
+	if len(targetNamespaces) == 0 && projectID != "" {
 		var nsList corev1.NamespaceList
-		if err := r.List(ctx, &nsList, client.MatchingLabels{projectLabelKey: tenantID}); err != nil {
+		if err := r.List(ctx, &nsList, client.MatchingLabels{projectLabelKey: projectID}); err != nil {
 			return false, err
 		}
 		for _, ns := range nsList.Items {
@@ -260,7 +260,7 @@ func (r *ProjectReconciler) finalizeProject(ctx context.Context, tn *platformv1a
 	return done, nil
 }
 
-func (r *ProjectReconciler) ensureNamespace(ctx context.Context, tn *platformv1alpha1.Project, nsName, tenantID string) error {
+func (r *ProjectReconciler) ensureNamespace(ctx context.Context, tn *platformv1alpha1.Project, nsName, projectID string) error {
 	var ns corev1.Namespace
 	err := r.Get(ctx, types.NamespacedName{Name: nsName}, &ns)
 	if apierrors.IsNotFound(err) {
@@ -268,7 +268,7 @@ func (r *ProjectReconciler) ensureNamespace(ctx context.Context, tn *platformv1a
 			ObjectMeta: metav1.ObjectMeta{
 				Name: nsName,
 				Labels: map[string]string{
-					projectLabelKey:                             tenantID,
+					projectLabelKey:                             projectID,
 					"pod-security.kubernetes.io/enforce": "baseline",
 					"pod-security.kubernetes.io/audit":   "baseline",
 					"pod-security.kubernetes.io/warn":    "baseline",
@@ -285,7 +285,7 @@ func (r *ProjectReconciler) ensureNamespace(ctx context.Context, tn *platformv1a
 	}
 
 	desired := map[string]string{
-		projectLabelKey:                             tenantID,
+		projectLabelKey:                             projectID,
 		"pod-security.kubernetes.io/enforce": "baseline",
 		"pod-security.kubernetes.io/audit":   "baseline",
 		"pod-security.kubernetes.io/warn":    "baseline",
@@ -364,7 +364,7 @@ func (r *ProjectReconciler) ensureAdminRBAC(ctx context.Context, tn *platformv1a
 				Namespace: ns,
 				Labels: map[string]string{
 					"app.kubernetes.io/managed-by": "arbiter",
-					projectLabelKey:                      tn.Spec.TenantID,
+					projectLabelKey:                      tn.Spec.ProjectID,
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -394,7 +394,7 @@ func (r *ProjectReconciler) ensureAdminRBAC(ctx context.Context, tn *platformv1a
 		rb.Labels = map[string]string{}
 	}
 	rb.Labels["app.kubernetes.io/managed-by"] = "arbiter"
-	rb.Labels[projectLabelKey] = tn.Spec.TenantID
+	rb.Labels[projectLabelKey] = tn.Spec.ProjectID
 
 	return r.Update(ctx, &rb)
 }
@@ -708,8 +708,8 @@ func collectTargetNamespaces(tn *platformv1alpha1.Project) []string {
 		targets = append(targets, tn.Spec.TargetNamespaces...)
 	} else if tn.Spec.TargetNamespace != "" {
 		targets = append(targets, tn.Spec.TargetNamespace)
-	} else if tn.Spec.TenantID != "" {
-		targets = append(targets, fmt.Sprintf("project-%s", tn.Spec.TenantID))
+	} else if tn.Spec.ProjectID != "" {
+		targets = append(targets, fmt.Sprintf("project-%s", tn.Spec.ProjectID))
 	}
 
 	seen := map[string]struct{}{}

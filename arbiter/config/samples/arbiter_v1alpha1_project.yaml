@@ -1,12 +1,12 @@
 apiVersion: project-arbiter.io/v1alpha1
 kind: Project
 metadata:
-  name: project-a
+  name: starcourt
 spec:
-  tenantID: ab
-  # targetNamespace: project-ab   # optional; defaults to project-<tenantID>
-  # targetNamespaces:             # optional; defaults to ["project-<tenantID>"]
-  #   - project-ab
-  #   - project-ops
-  # adminSubjects: []            # optional
+  projectID: starcourt
+  # targetNamespace: project-starcourt   # optional; defaults to project-<projectID>
+  # targetNamespaces:             # optional; defaults to ["project-<projectID>"]
+  #   - starcourt-mall
+  #   - starcourt-ops
+  # adminSubjects: []             # optional
   # baselinePolicy: {}           # optional

@@ -21,12 +21,12 @@ func (d *ProjectDefaulter) Default(_ context.Context, obj runtime.Object) error 
 	if !ok {
 		return fmt.Errorf("expected *Project but got %T", obj)
 	}
-	if tn.Spec.TenantID == "" {
+	if tn.Spec.ProjectID == "" {
 		return nil
 	}
 
 	if tn.Spec.TargetNamespace == "" && len(tn.Spec.TargetNamespaces) == 0 {
-		tn.Spec.TargetNamespaces = []string{fmt.Sprintf("project-%s", tn.Spec.TenantID)}
+		tn.Spec.TargetNamespaces = []string{fmt.Sprintf("project-%s", tn.Spec.ProjectID)}
 	}
 	return nil
 }

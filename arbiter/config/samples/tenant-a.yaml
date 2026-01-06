@@ -2,17 +2,17 @@
 apiVersion: project-arbiter.io/v1alpha1
 kind: Project
 metadata:
-  name: project-a
+  name: hawkins
 spec:
-  tenantID: "ab"
-  # targetNamespace: "project-ab"  # optional; default is project-<tenantID>
-  # targetNamespaces:              # optional; defaults to ["project-<tenantID>"]
-  #   - project-ab
-  #   - project-ops
+  projectID: "hawkins"
+  # targetNamespace: "project-hawkins"  # optional; default is project-<projectID>
+  # targetNamespaces:              # optional; defaults to ["project-<projectID>"]
+  #   - hawkins-lab
+  #   - hawkins-ops
   baselinePolicy:
     networkIsolation: true
     resourceQuota: true
     limitRange: true
   adminSubjects:
     - kind: User
-      name: "project-a-admin"
+      name: "eleven@hawkins.local"
