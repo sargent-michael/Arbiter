@@ -1,0 +1,27 @@
+apiVersion: project-arbiter.io/v1alpha1
+kind: Baseline
+metadata:
+  name: default
+spec:
+  baselinePolicy:
+    networkIsolation: true
+    resourceQuota: true
+    limitRange: true
+    allowedIngressPorts:
+      - 443
+    resourceQuotaSpec:
+      hard:
+        requests.cpu: "2"
+        requests.memory: 4Gi
+        limits.cpu: "4"
+        limits.memory: 8Gi
+        pods: "50"
+    limitRangeSpec:
+      limits:
+        - type: Container
+          defaultRequest:
+            cpu: 100m
+            memory: 128Mi
+          default:
+            cpu: "500m"
+            memory: 512Mi

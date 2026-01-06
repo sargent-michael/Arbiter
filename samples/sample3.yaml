@@ -1,0 +1,40 @@
+apiVersion: project-arbiter.io/v1alpha1
+kind: Project
+metadata:
+  name: hq-ops
+spec:
+  tenantID: hq-ops
+
+  # Multiple namespaces managed by a single project.
+  targetNamespaces:
+    - hq-core
+    - hq-platform
+    - hq-observability
+
+  adminSubjects:
+    - kind: Group
+      name: operations
+    - kind: User
+      name: chief@arbiter.local
+
+  # Per-project overrides on top of the Baseline defaults.
+  baselinePolicy:
+    allowedIngressPorts:
+      - 443
+      - 8443
+    resourceQuotaSpec:
+      hard:
+        requests.cpu: "4"
+        requests.memory: 8Gi
+        limits.cpu: "8"
+        limits.memory: 16Gi
+        pods: "100"
+    limitRangeSpec:
+      limits:
+        - type: Container
+          defaultRequest:
+            cpu: 250m
+            memory: 256Mi
+          default:
+            cpu: "1"
+            memory: 1Gi

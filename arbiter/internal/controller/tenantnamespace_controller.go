@@ -198,9 +198,15 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		Type:               "Available",
 		Status:             metav1.ConditionTrue,
 		Reason:             "Reconciled",
-		Message:            "Tenant namespace and baseline controls are in place",
+		Message:            "Project namespaces and baseline controls are in place",
 		LastTransitionTime: metav1.Now(),
+		ObservedGeneration: tn.Generation,
 	})
+
+	tn.Status.Namespaces = append([]string{}, targetNamespaces...)
+	tn.Status.ResourceQuotaSummary = summarizeResourceQuota(policy)
+	tn.Status.LimitRangeSummary = summarizeLimitRange(policy)
+	tn.Status.NetworkPolicySummary = summarizeNetworkPolicy(policy)
 
 	if err := r.Status().Update(ctx, &tn); err != nil && !apierrors.IsConflict(err) {
 		return ctrl.Result{}, err
@@ -314,7 +320,12 @@ func (r *ProjectReconciler) ensureAdminRBAC(ctx context.Context, tn *platformv1a
 		return nil
 	}
 
-	rbName := "tenant-admins"
+	rbName := "project-admins"
+	legacyName := "tenant-admins"
+
+	if err := r.deleteLegacyRoleBinding(ctx, legacyName, ns); err != nil {
+		return err
+	}
 
 	desiredSubjects := make([]rbacv1.Subject, 0, len(tn.Spec.AdminSubjects))
 	for _, s := range tn.Spec.AdminSubjects {
@@ -380,6 +391,18 @@ func (r *ProjectReconciler) ensureAdminRBAC(ctx context.Context, tn *platformv1a
 	rb.Labels[projectLabelKey] = tn.Spec.TenantID
 
 	return r.Update(ctx, &rb)
+}
+
+func (r *ProjectReconciler) deleteLegacyRoleBinding(ctx context.Context, name, namespace string) error {
+	var rb rbacv1.RoleBinding
+	err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, &rb)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return r.Delete(ctx, &rb)
 }
 
 func (r *ProjectReconciler) ensureResourceQuota(ctx context.Context, tn *platformv1alpha1.Project, ns string, policy platformv1alpha1.BaselinePolicy) error {
@@ -701,4 +724,51 @@ func collectTargetNamespaces(tn *platformv1alpha1.Project) []string {
 
 func boolPtr(v bool) *bool {
 	return &v
+}
+
+func summarizeResourceQuota(policy platformv1alpha1.BaselinePolicy) string {
+	if policy.ResourceQuota == nil || !*policy.ResourceQuota {
+		return "disabled"
+	}
+	if policy.ResourceQuotaSpec == nil {
+		return "default"
+	}
+	spec := policy.ResourceQuotaSpec
+	return fmt.Sprintf("cpu:%s/%s mem:%s/%s pods:%s",
+		spec.Hard[corev1.ResourceRequestsCPU].String(),
+		spec.Hard[corev1.ResourceLimitsCPU].String(),
+		spec.Hard[corev1.ResourceRequestsMemory].String(),
+		spec.Hard[corev1.ResourceLimitsMemory].String(),
+		spec.Hard[corev1.ResourcePods].String(),
+	)
+}
+
+func summarizeLimitRange(policy platformv1alpha1.BaselinePolicy) string {
+	if policy.LimitRange == nil || !*policy.LimitRange {
+		return "disabled"
+	}
+	if policy.LimitRangeSpec == nil || len(policy.LimitRangeSpec.Limits) == 0 {
+		return "default"
+	}
+	item := policy.LimitRangeSpec.Limits[0]
+	defCPU := item.Default[corev1.ResourceCPU].String()
+	defMem := item.Default[corev1.ResourceMemory].String()
+	reqCPU := item.DefaultRequest[corev1.ResourceCPU].String()
+	reqMem := item.DefaultRequest[corev1.ResourceMemory].String()
+	return fmt.Sprintf("req:%s/%s lim:%s/%s", reqCPU, reqMem, defCPU, defMem)
+}
+
+func summarizeNetworkPolicy(policy platformv1alpha1.BaselinePolicy) string {
+	if policy.NetworkIsolation == nil || !*policy.NetworkIsolation {
+		return "disabled"
+	}
+	if len(policy.AllowedIngressPorts) == 0 {
+		return "ingress:443"
+	}
+	ports := make([]string, 0, len(policy.AllowedIngressPorts))
+	for _, port := range policy.AllowedIngressPorts {
+		ports = append(ports, fmt.Sprintf("%d", port))
+	}
+	sort.Strings(ports)
+	return fmt.Sprintf("ingress:%s", strings.Join(ports, ","))
 }

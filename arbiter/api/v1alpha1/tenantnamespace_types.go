@@ -97,11 +97,32 @@ type BaselinePolicy struct {
 
 // ProjectStatus defines the observed state of Project.
 type ProjectStatus struct {
+	// namespaces managed for this project.
+	// +optional
+	Namespaces []string `json:"namespaces,omitempty"`
+
+	// resourceQuotaSummary is a human-friendly summary of enforced quota.
+	// +optional
+	ResourceQuotaSummary string `json:"resourceQuotaSummary,omitempty"`
+
+	// limitRangeSummary is a human-friendly summary of enforced limits.
+	// +optional
+	LimitRangeSummary string `json:"limitRangeSummary,omitempty"`
+
+	// networkPolicySummary is a human-friendly summary of enforced network policy.
+	// +optional
+	NetworkPolicySummary string `json:"networkPolicySummary,omitempty"`
+
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:resource:scope=Cluster,shortName=proj
+// +kubebuilder:printcolumn:name="Namespaces",type=string,JSONPath=`.status.namespaces`
+// +kubebuilder:printcolumn:name="Quota",type=string,JSONPath=`.status.resourceQuotaSummary`
+// +kubebuilder:printcolumn:name="Limits",type=string,JSONPath=`.status.limitRangeSummary`
+// +kubebuilder:printcolumn:name="Network",type=string,JSONPath=`.status.networkPolicySummary`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 type Project struct {

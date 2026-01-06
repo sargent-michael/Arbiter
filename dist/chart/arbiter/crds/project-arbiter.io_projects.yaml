@@ -17,6 +17,22 @@ spec:
   scope: Cluster
   versions:
   - name: v1alpha1
+    additionalPrinterColumns:
+    - jsonPath: .status.namespaces
+      name: Namespaces
+      type: string
+    - jsonPath: .status.resourceQuotaSummary
+      name: Quota
+      type: string
+    - jsonPath: .status.limitRangeSummary
+      name: Limits
+      type: string
+    - jsonPath: .status.networkPolicySummary
+      name: Network
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     schema:
       openAPIV3Schema:
         properties:
@@ -259,6 +275,21 @@ spec:
           status:
             description: ProjectStatus defines the observed state of Project.
             properties:
+              limitRangeSummary:
+                description: limitRangeSummary is a human-friendly summary of enforced limits.
+                type: string
+              namespaces:
+                description: namespaces managed for this project.
+                items:
+                  type: string
+                type: array
+                x-kubernetes-list-type: atomic
+              networkPolicySummary:
+                description: networkPolicySummary is a human-friendly summary of enforced network policy.
+                type: string
+              resourceQuotaSummary:
+                description: resourceQuotaSummary is a human-friendly summary of enforced quota.
+                type: string
               conditions:
                 items:
                   description: Condition contains details for one aspect of the current
