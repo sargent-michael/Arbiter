@@ -3,7 +3,7 @@ fullnameOverride: ""
 
 image:
   repository: ghcr.io/sargent-michael/arbiter
-  tag: "0.0.5"
+  tag: "0.0.6"
   pullPolicy: IfNotPresent
 
 createNamespace: false

@@ -1,7 +1,7 @@
 arbiter:
   image:
     repository: ghcr.io/sargent-michael/arbiter
-    tag: "0.0.5"
+    tag: "0.0.6"
   metrics:
     enabled: true
     serviceMonitor:
@@ -34,3 +34,7 @@ kube-prometheus-stack:
       serviceMonitorSelectorNilUsesHelmValues: false
       serviceMonitorSelector: {}
       serviceMonitorNamespaceSelector: {}
+
+cert-manager:
+  enabled: true
+  installCRDs: true

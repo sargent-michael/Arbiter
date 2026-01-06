@@ -40,7 +40,7 @@ helm repo update
 helm install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=0.0.5 \
+  --set arbiter.image.tag=0.0.6 \
   --set kube-prometheus-stack.enabled=true
 kubectl apply -f samples/sample1.yaml
 kubectl apply -f samples/sample2.yaml
@@ -194,7 +194,18 @@ kubectl arbiter-logs -n arbiter-system --tail=100
 
 ---
 
-## Uninstall
+## Helm Install
+
+```bash
+helm repo add arbiter https://sargent-michael.github.io/Arbiter/packages
+helm repo update
+helm upgrade --install arbiter-stack arbiter/arbiter-stack \
+  --namespace arbiter-system \
+  --create-namespace \
+  --set arbiter.image.tag=0.0.6
+```
+
+To remove:
 
 ```bash
 helm uninstall arbiter-stack -n arbiter-system
