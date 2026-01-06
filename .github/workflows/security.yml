@@ -48,7 +48,7 @@ jobs:
           cache: true
 
       - name: Gosec
-        uses: securego/gosec@v2.20.0
+        uses: securego/gosec@v2.22.11
         with:
           args: ./...
           working-directory: arbiter
