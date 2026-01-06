@@ -46,6 +46,8 @@ kubectl apply -f samples/sample1.yaml
 kubectl apply -f samples/sample2.yaml
 ```
 
+The stack chart installs cert-manager, Prometheus, and Arbiter in one shot.
+
 ---
 
 ## TenantNamespace CRD
