@@ -31,7 +31,7 @@ rules:
 - apiGroups:
   - project-arbiter.io
   resources:
-  - projects
+  - settlers
   verbs:
   - create
   - delete
@@ -43,13 +43,13 @@ rules:
 - apiGroups:
   - project-arbiter.io
   resources:
-  - projects/finalizers
+  - settlers/finalizers
   verbs:
   - update
 - apiGroups:
   - project-arbiter.io
   resources:
-  - projects/status
+  - settlers/status
   verbs:
   - get
   - patch
@@ -232,34 +232,34 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "arbiter.fullname" . }}-project-admin-role
+  name: {{ include "arbiter.fullname" . }}-settler-admin-role
   labels:
     {{- include "arbiter.labels" . | nindent 4 }}
 rules:
 - apiGroups:
   - project-arbiter.io
   resources:
-  - projects
+  - settlers
   verbs:
   - '*'
 - apiGroups:
   - project-arbiter.io
   resources:
-  - projects/status
+  - settlers/status
   verbs:
   - get
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "arbiter.fullname" . }}-project-editor-role
+  name: {{ include "arbiter.fullname" . }}-settler-editor-role
   labels:
     {{- include "arbiter.labels" . | nindent 4 }}
 rules:
 - apiGroups:
   - project-arbiter.io
   resources:
-  - projects
+  - settlers
   verbs:
   - create
   - delete
@@ -271,21 +271,21 @@ rules:
 - apiGroups:
   - project-arbiter.io
   resources:
-  - projects/status
+  - settlers/status
   verbs:
   - get
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "arbiter.fullname" . }}-project-viewer-role
+  name: {{ include "arbiter.fullname" . }}-settler-viewer-role
   labels:
     {{- include "arbiter.labels" . | nindent 4 }}
 rules:
 - apiGroups:
   - project-arbiter.io
   resources:
-  - projects
+  - settlers
   verbs:
   - get
   - list
@@ -293,7 +293,7 @@ rules:
 - apiGroups:
   - project-arbiter.io
   resources:
-  - projects/status
+  - settlers/status
   verbs:
   - get
 {{- end }}

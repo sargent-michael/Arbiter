@@ -30,7 +30,7 @@ import (
 	platformv1alpha1 "github.com/sargent-michael/Kubernetes-Operator/api/v1alpha1"
 )
 
-var _ = Describe("Project Controller", func() {
+var _ = Describe("Settler Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
@@ -40,16 +40,19 @@ var _ = Describe("Project Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		project := &platformv1alpha1.Project{}
+		settler := &platformv1alpha1.Settler{}
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind Project")
-			err := k8sClient.Get(ctx, typeNamespacedName, project)
+			By("creating the custom resource for the Kind Settler")
+			err := k8sClient.Get(ctx, typeNamespacedName, settler)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &platformv1alpha1.Project{
+				resource := &platformv1alpha1.Settler{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
+					},
+					Spec: platformv1alpha1.SettlerSpec{
+						SettlerID: "test-settler",
 					},
 					// TODO(user): Specify other spec details if needed.
 				}
@@ -59,16 +62,16 @@ var _ = Describe("Project Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &platformv1alpha1.Project{}
+			resource := &platformv1alpha1.Settler{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Cleanup the specific resource instance Project")
+			By("Cleanup the specific resource instance Settler")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
-			controllerReconciler := &ProjectReconciler{
+			controllerReconciler := &SettlerReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}

@@ -32,13 +32,13 @@ import (
 	platformv1alpha1 "github.com/sargent-michael/Kubernetes-Operator/api/v1alpha1"
 )
 
-type ProjectReconciler struct {
+type SettlerReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-const projectFinalizer = "project-arbiter.io/project-cleanup"
-const projectLabelKey = "project-arbiter.io/project"
+const settlerFinalizer = "project-arbiter.io/settler-cleanup"
+const settlerLabelKey = "project-arbiter.io/settler"
 const defaultBaselineName = "default"
 
 var (
@@ -70,9 +70,9 @@ func init() {
 	metrics.Registry.MustRegister(reconcileTotal, reconcileErrors, reconcileDuration)
 }
 
-// +kubebuilder:rbac:groups=project-arbiter.io,resources=projects,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=project-arbiter.io,resources=projects/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=project-arbiter.io,resources=projects/finalizers,verbs=update
+// +kubebuilder:rbac:groups=project-arbiter.io,resources=settlers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=project-arbiter.io,resources=settlers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=project-arbiter.io,resources=settlers/finalizers,verbs=update
 
 // Core resources we manage
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch;create;update;patch;delete
@@ -87,34 +87,34 @@ func init() {
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,verbs=get;list;watch
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=admin,verbs=bind
 
-func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
+func (r *SettlerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
 	log := logf.FromContext(ctx)
 	start := time.Now()
 	defer func() {
 		outcome := "success"
 		if err != nil {
 			outcome = "error"
-			reconcileErrors.WithLabelValues("project").Inc()
+			reconcileErrors.WithLabelValues("settler").Inc()
 		}
-		reconcileTotal.WithLabelValues("project", outcome).Inc()
-		reconcileDuration.WithLabelValues("project", outcome).Observe(time.Since(start).Seconds())
+		reconcileTotal.WithLabelValues("settler", outcome).Inc()
+		reconcileDuration.WithLabelValues("settler", outcome).Observe(time.Since(start).Seconds())
 	}()
 
-	var tn platformv1alpha1.Project
+	var tn platformv1alpha1.Settler
 	if err := r.Get(ctx, req.NamespacedName, &tn); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	if !tn.ObjectMeta.DeletionTimestamp.IsZero() {
-		if controllerutil.ContainsFinalizer(&tn, projectFinalizer) {
-			done, err := r.finalizeProject(ctx, &tn)
+		if controllerutil.ContainsFinalizer(&tn, settlerFinalizer) {
+			done, err := r.finalizeSettler(ctx, &tn)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
 			if !done {
 				return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 			}
-			controllerutil.RemoveFinalizer(&tn, projectFinalizer)
+			controllerutil.RemoveFinalizer(&tn, settlerFinalizer)
 			if err := r.Update(ctx, &tn); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -122,15 +122,15 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		return ctrl.Result{}, nil
 	}
 
-	projectID := tn.Spec.ProjectID
-	if projectID == "" {
-		log.Info("spec.projectID is empty; waiting for a valid spec")
+	settlerID := tn.Spec.SettlerID
+	if settlerID == "" {
+		log.Info("spec.settlerID is empty; waiting for a valid spec")
 
 		apimeta.SetStatusCondition(&tn.Status.Conditions, metav1.Condition{
 			Type:               "Available",
 			Status:             metav1.ConditionFalse,
-			Reason:             "MissingProjectID",
-			Message:            "spec.projectID must be set",
+			Reason:             "MissingSettlerID",
+			Message:            "spec.settlerID must be set",
 			LastTransitionTime: metav1.Now(),
 		})
 		_ = r.Status().Update(ctx, &tn) // best-effort
@@ -156,8 +156,8 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		return ctrl.Result{}, err
 	}
 
-	if !controllerutil.ContainsFinalizer(&tn, projectFinalizer) {
-		controllerutil.AddFinalizer(&tn, projectFinalizer)
+	if !controllerutil.ContainsFinalizer(&tn, settlerFinalizer) {
+		controllerutil.AddFinalizer(&tn, settlerFinalizer)
 		if err := r.Update(ctx, &tn); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -165,7 +165,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 
 	for _, targetNS := range targetNamespaces {
 		// 1) Namespace + labels
-		if err := r.ensureNamespace(ctx, &tn, targetNS, projectID); err != nil {
+		if err := r.ensureNamespace(ctx, &tn, targetNS, settlerID); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -200,7 +200,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		Type:               "Available",
 		Status:             metav1.ConditionTrue,
 		Reason:             "Reconciled",
-		Message:            "Project namespaces and baseline controls are in place",
+		Message:            "Settler namespaces and baseline controls are in place",
 		LastTransitionTime: metav1.Now(),
 		ObservedGeneration: tn.Generation,
 	})
@@ -221,12 +221,12 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	return ctrl.Result{}, nil
 }
 
-func (r *ProjectReconciler) finalizeProject(ctx context.Context, tn *platformv1alpha1.Project) (bool, error) {
-	projectID := tn.Spec.ProjectID
+func (r *SettlerReconciler) finalizeSettler(ctx context.Context, tn *platformv1alpha1.Settler) (bool, error) {
+	settlerID := tn.Spec.SettlerID
 	targetNamespaces := collectTargetNamespaces(tn)
-	if len(targetNamespaces) == 0 && projectID != "" {
+	if len(targetNamespaces) == 0 && settlerID != "" {
 		var nsList corev1.NamespaceList
-		if err := r.List(ctx, &nsList, client.MatchingLabels{projectLabelKey: projectID}); err != nil {
+		if err := r.List(ctx, &nsList, client.MatchingLabels{settlerLabelKey: settlerID}); err != nil {
 			return false, err
 		}
 		for _, ns := range nsList.Items {
@@ -260,7 +260,7 @@ func (r *ProjectReconciler) finalizeProject(ctx context.Context, tn *platformv1a
 	return done, nil
 }
 
-func (r *ProjectReconciler) ensureNamespace(ctx context.Context, tn *platformv1alpha1.Project, nsName, projectID string) error {
+func (r *SettlerReconciler) ensureNamespace(ctx context.Context, tn *platformv1alpha1.Settler, nsName, settlerID string) error {
 	var ns corev1.Namespace
 	err := r.Get(ctx, types.NamespacedName{Name: nsName}, &ns)
 	if apierrors.IsNotFound(err) {
@@ -268,7 +268,7 @@ func (r *ProjectReconciler) ensureNamespace(ctx context.Context, tn *platformv1a
 			ObjectMeta: metav1.ObjectMeta{
 				Name: nsName,
 				Labels: map[string]string{
-					projectLabelKey:                             projectID,
+					settlerLabelKey:                      settlerID,
 					"pod-security.kubernetes.io/enforce": "baseline",
 					"pod-security.kubernetes.io/audit":   "baseline",
 					"pod-security.kubernetes.io/warn":    "baseline",
@@ -285,7 +285,7 @@ func (r *ProjectReconciler) ensureNamespace(ctx context.Context, tn *platformv1a
 	}
 
 	desired := map[string]string{
-		projectLabelKey:                             projectID,
+		settlerLabelKey:                      settlerID,
 		"pod-security.kubernetes.io/enforce": "baseline",
 		"pod-security.kubernetes.io/audit":   "baseline",
 		"pod-security.kubernetes.io/warn":    "baseline",
@@ -316,7 +316,7 @@ func (r *ProjectReconciler) ensureNamespace(ctx context.Context, tn *platformv1a
 	return nil
 }
 
-func (r *ProjectReconciler) ensureAdminRBAC(ctx context.Context, tn *platformv1alpha1.Project, ns string) error {
+func (r *SettlerReconciler) ensureAdminRBAC(ctx context.Context, tn *platformv1alpha1.Settler, ns string) error {
 	// FIX: Do not create a wildcard Role (that triggers RBAC escalation protection).
 	// Instead, bind tenant admin subjects to the built-in ClusterRole "admin" within this namespace.
 	// This yields namespace-admin power without requiring cluster-admin.
@@ -326,7 +326,7 @@ func (r *ProjectReconciler) ensureAdminRBAC(ctx context.Context, tn *platformv1a
 		return nil
 	}
 
-	rbName := "project-admins"
+	rbName := "settler-admins"
 	legacyName := "tenant-admins"
 
 	if err := r.deleteLegacyRoleBinding(ctx, legacyName, ns); err != nil {
@@ -364,7 +364,7 @@ func (r *ProjectReconciler) ensureAdminRBAC(ctx context.Context, tn *platformv1a
 				Namespace: ns,
 				Labels: map[string]string{
 					"app.kubernetes.io/managed-by": "arbiter",
-					projectLabelKey:                      tn.Spec.ProjectID,
+					settlerLabelKey:                tn.Spec.SettlerID,
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -394,12 +394,12 @@ func (r *ProjectReconciler) ensureAdminRBAC(ctx context.Context, tn *platformv1a
 		rb.Labels = map[string]string{}
 	}
 	rb.Labels["app.kubernetes.io/managed-by"] = "arbiter"
-	rb.Labels[projectLabelKey] = tn.Spec.ProjectID
+	rb.Labels[settlerLabelKey] = tn.Spec.SettlerID
 
 	return r.Update(ctx, &rb)
 }
 
-func (r *ProjectReconciler) deleteLegacyRoleBinding(ctx context.Context, name, namespace string) error {
+func (r *SettlerReconciler) deleteLegacyRoleBinding(ctx context.Context, name, namespace string) error {
 	var rb rbacv1.RoleBinding
 	err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, &rb)
 	if apierrors.IsNotFound(err) {
@@ -411,7 +411,7 @@ func (r *ProjectReconciler) deleteLegacyRoleBinding(ctx context.Context, name, n
 	return r.Delete(ctx, &rb)
 }
 
-func (r *ProjectReconciler) ensureResourceQuota(ctx context.Context, tn *platformv1alpha1.Project, ns string, policy platformv1alpha1.BaselinePolicy) error {
+func (r *SettlerReconciler) ensureResourceQuota(ctx context.Context, tn *platformv1alpha1.Settler, ns string, policy platformv1alpha1.BaselinePolicy) error {
 	name := "tenant-quota"
 	desiredSpec := defaultResourceQuotaSpec()
 	if policy.ResourceQuotaSpec != nil {
@@ -440,7 +440,7 @@ func (r *ProjectReconciler) ensureResourceQuota(ctx context.Context, tn *platfor
 	return nil
 }
 
-func (r *ProjectReconciler) ensureLimitRange(ctx context.Context, tn *platformv1alpha1.Project, ns string, policy platformv1alpha1.BaselinePolicy) error {
+func (r *SettlerReconciler) ensureLimitRange(ctx context.Context, tn *platformv1alpha1.Settler, ns string, policy platformv1alpha1.BaselinePolicy) error {
 	name := "tenant-limits"
 	desiredSpec := defaultLimitRangeSpec()
 	if policy.LimitRangeSpec != nil {
@@ -469,7 +469,7 @@ func (r *ProjectReconciler) ensureLimitRange(ctx context.Context, tn *platformv1
 	return nil
 }
 
-func (r *ProjectReconciler) ensureNetworkPolicies(ctx context.Context, tn *platformv1alpha1.Project, ns string, policy platformv1alpha1.BaselinePolicy) error {
+func (r *SettlerReconciler) ensureNetworkPolicies(ctx context.Context, tn *platformv1alpha1.Settler, ns string, policy platformv1alpha1.BaselinePolicy) error {
 	allowedIngressPorts := policy.AllowedIngressPorts
 	if len(allowedIngressPorts) == 0 {
 		allowedIngressPorts = []int32{443}
@@ -570,7 +570,7 @@ func defaultLimitRangeSpec() corev1.LimitRangeSpec {
 	}
 }
 
-func (r *ProjectReconciler) ensureNetworkPolicy(ctx context.Context, owner client.Object, desired *netv1.NetworkPolicy) error {
+func (r *SettlerReconciler) ensureNetworkPolicy(ctx context.Context, owner client.Object, desired *netv1.NetworkPolicy) error {
 	var current netv1.NetworkPolicy
 	key := types.NamespacedName{Name: desired.GetName(), Namespace: desired.GetNamespace()}
 	if err := r.Get(ctx, key, &current); err != nil {
@@ -591,16 +591,16 @@ func (r *ProjectReconciler) ensureNetworkPolicy(ctx context.Context, owner clien
 	return r.Update(ctx, &current)
 }
 
-func (r *ProjectReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *SettlerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&platformv1alpha1.Project{}).
+		For(&platformv1alpha1.Settler{}).
 		Owns(&corev1.Namespace{}).
 		Owns(&corev1.ResourceQuota{}).
 		Owns(&corev1.LimitRange{}).
 		Owns(&netv1.NetworkPolicy{}).
 		Owns(&rbacv1.RoleBinding{}).
 		Watches(&platformv1alpha1.Baseline{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, _ client.Object) []reconcile.Request {
-			var list platformv1alpha1.ProjectList
+			var list platformv1alpha1.SettlerList
 			if err := r.List(ctx, &list); err != nil {
 				return nil
 			}
@@ -612,11 +612,11 @@ func (r *ProjectReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			}
 			return requests
 		})).
-		Named("project").
+		Named("settler").
 		Complete(r)
 }
 
-func (r *ProjectReconciler) resolveBaselinePolicy(ctx context.Context, tn *platformv1alpha1.Project) (platformv1alpha1.BaselinePolicy, error) {
+func (r *SettlerReconciler) resolveBaselinePolicy(ctx context.Context, tn *platformv1alpha1.Settler) (platformv1alpha1.BaselinePolicy, error) {
 	policy := defaultBaselinePolicy()
 
 	baseline, err := r.getBaseline(ctx)
@@ -632,7 +632,7 @@ func (r *ProjectReconciler) resolveBaselinePolicy(ctx context.Context, tn *platf
 	return policy, nil
 }
 
-func (r *ProjectReconciler) getBaseline(ctx context.Context) (*platformv1alpha1.Baseline, error) {
+func (r *SettlerReconciler) getBaseline(ctx context.Context) (*platformv1alpha1.Baseline, error) {
 	var list platformv1alpha1.BaselineList
 	if err := r.List(ctx, &list); err != nil {
 		return nil, err
@@ -702,14 +702,14 @@ func defaultBaselinePolicy() platformv1alpha1.BaselinePolicy {
 	return normalizeBaselinePolicy(platformv1alpha1.BaselinePolicy{})
 }
 
-func collectTargetNamespaces(tn *platformv1alpha1.Project) []string {
+func collectTargetNamespaces(tn *platformv1alpha1.Settler) []string {
 	var targets []string
 	if len(tn.Spec.TargetNamespaces) > 0 {
 		targets = append(targets, tn.Spec.TargetNamespaces...)
 	} else if tn.Spec.TargetNamespace != "" {
 		targets = append(targets, tn.Spec.TargetNamespace)
-	} else if tn.Spec.ProjectID != "" {
-		targets = append(targets, fmt.Sprintf("project-%s", tn.Spec.ProjectID))
+	} else if tn.Spec.SettlerID != "" {
+		targets = append(targets, fmt.Sprintf("settler-%s", tn.Spec.SettlerID))
 	}
 
 	seen := map[string]struct{}{}

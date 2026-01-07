@@ -1,13 +1,13 @@
 # Arbiter Operator
 
-Arbiter is a control plane operator for projects and namespaces. It watches `Project`
-resources and enforces a strict, repeatable baseline so every project starts clean
+Arbiter is a control plane operator for settlers and namespaces. It watches `Settler`
+resources and enforces a strict, repeatable baseline so every settler starts clean
 and stays compliant.
 
 ## What It Reconciles
 
 - Namespace creation + labeling
-- Admin RBAC RoleBinding inside project namespaces
+- Admin RBAC RoleBinding inside settler namespaces
 - ResourceQuota defaults
 - LimitRange defaults
 - NetworkPolicy defaults:
@@ -17,7 +17,7 @@ and stays compliant.
 
 ## Overrides
 
-Per-project overrides can be set in `spec.baselinePolicy`:
+Per-settler overrides can be set in `spec.baselinePolicy`:
 
 - `resourceQuotaSpec` to replace the default ResourceQuota
 - `limitRangeSpec` to replace the default LimitRange

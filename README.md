@@ -9,17 +9,17 @@
 -----------------------------------------
 ```
 
-Arbiter is a Kubernetes operator that turns project onboarding into a single, repeatable declaration.
-You define a `Project`, and Arbiter enforces namespaces, RBAC, quotas, limits, and network policy
+Arbiter is a Kubernetes operator that turns settler onboarding into a single, repeatable declaration.
+You define a `Settler`, and Arbiter enforces namespaces, RBAC, quotas, limits, and network policy
 with continuous reconciliation.
 
 ---
 
 ## Highlights
 
-- Multi-namespace projects with deterministic naming (`project-<projectID>` by default)
-- Global Baseline with per-project overrides for quotas, limits, and network policy
-- Status summaries in `kubectl get proj` for fast validation
+- Multi-namespace settlers with deterministic naming (`settler-<settlerID>` by default)
+- Global Baseline with per-settler overrides for quotas, limits, and network policy
+- Status summaries in `kubectl get sett` for fast validation
 - Helm stack installs cert-manager, Prometheus, Grafana, and Arbiter together
 - Metrics and dashboards included out of the box
 
@@ -74,16 +74,16 @@ kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 
 ---
 
-## Project CRD
+## Settler CRD
 
 ```yaml
 apiVersion: project-arbiter.io/v1alpha1
-kind: Project
+kind: Settler
 metadata:
   name: hawkins
 spec:
-  projectID: "hawkins"
-  # targetNamespace: project-hawkins
+  settlerID: "hawkins"
+  # targetNamespace: settler-hawkins
   # targetNamespaces:
   #   - hawkins-lab
   #   - hawkins-ops
@@ -112,9 +112,9 @@ spec:
 
 ### Key Fields
 
-- `spec.projectID`: Stable project identifier (required)
+- `spec.settlerID`: Stable settler identifier (required)
 - `spec.targetNamespace`: Explicit namespace override (optional)
-- `spec.targetNamespaces`: List of namespaces managed for the project (optional)
+- `spec.targetNamespaces`: List of namespaces managed for the settler (optional)
 - `spec.adminSubjects`: RBAC subjects granted admin access
 - `spec.baselinePolicy`: Toggle and override baseline enforcement
 
@@ -139,9 +139,9 @@ spec:
 
 ## Samples (Stranger Things)
 
-- `samples/sample1.yaml`: simple Project with defaults (Starcourt)
+- `samples/sample1.yaml`: simple Settler with defaults (Starcourt)
 - `samples/sample2.yaml`: overrides + extra RoleBindings (Upside Down)
-- `samples/sample3.yaml`: multi-namespace project (Hawkins R&D)
+- `samples/sample3.yaml`: multi-namespace settler (Hawkins R&D)
 - `samples/sample4.yaml`: multi-namespace + multiple ingress ports
 
 ---
@@ -165,10 +165,10 @@ kubectl port-forward -n arbiter-system svc/arbiter-stack-grafana 3000:80
 ## CLI Shortcuts
 
 ```bash
-kubectl get projects
-kubectl get proj
-kubectl get proj <project>
-kubectl delete proj <project>
+kubectl get settlers
+kubectl get sett
+kubectl get sett <settler>
+kubectl delete sett <settler>
 ```
 
 Arbiter logs via kubectl plugin:

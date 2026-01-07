@@ -2,11 +2,11 @@ apiVersion: v2
 name: arbiter-stack
 description: Arbiter plus optional kube-prometheus-stack bootstrap.
 type: application
-version: 0.1.1
-appVersion: "1.0.2"
+version: 0.1.2
+appVersion: "1.0.3"
 dependencies:
   - name: arbiter
-    version: 0.1.1
+    version: 0.1.2
     repository: "https://sargent-michael.github.io/Arbiter"
   - name: cert-manager
     version: 1.15.3

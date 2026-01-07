@@ -1,11 +1,11 @@
 apiVersion: project-arbiter.io/v1alpha1
-kind: Project
+kind: Settler
 metadata:
   name: mind-flayer
 spec:
-  projectID: mind-flayer
+  settlerID: mind-flayer
 
-  # Multiple namespaces managed by a single project.
+  # Multiple namespaces managed by a single settler.
   targetNamespaces:
     - creel-house
     - surfer-boy

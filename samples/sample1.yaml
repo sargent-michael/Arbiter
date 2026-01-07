@@ -1,9 +1,9 @@
 apiVersion: project-arbiter.io/v1alpha1
-kind: Project
+kind: Settler
 metadata:
   name: starcourt
 spec:
-  projectID: starcourt
+  settlerID: starcourt
 
   # Defaults apply (namespace name, baseline controls)
   adminSubjects:

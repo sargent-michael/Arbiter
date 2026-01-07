@@ -97,7 +97,7 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-	fmt.Fprintln(os.Stdout, banner)
+	fmt.Fprint(os.Stdout, banner)
 
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will
@@ -190,16 +190,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := (&controller.ProjectReconciler{
+	if err := (&controller.SettlerReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Project")
+		setupLog.Error(err, "unable to create controller", "controller", "Settler")
 		os.Exit(1)
 	}
 
-	if err := (&platformv1alpha1.Project{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "Project")
+	if err := (&platformv1alpha1.Settler{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "Settler")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

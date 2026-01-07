@@ -4,16 +4,16 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.19.0
-  name: projects.project-arbiter.io
+  name: settlers.project-arbiter.io
 spec:
   group: project-arbiter.io
   names:
-    kind: Project
-    listKind: ProjectList
-    plural: projects
+    kind: Settler
+    listKind: SettlerList
+    plural: settlers
     shortNames:
-    - proj
-    singular: project
+    - sett
+    singular: settler
   scope: Cluster
   versions:
   - name: v1alpha1
@@ -54,7 +54,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: ProjectSpec defines the desired state of Project
+            description: SettlerSpec defines the desired state of Settler
             properties:
               adminSubjects:
                 description: |-
@@ -249,37 +249,37 @@ spec:
                 type: object
               targetNamespace:
                 description: targetNamespace is the namespace name to create/manage.
-                  If empty, defaults to "project-<projectID>".
+                  If empty, defaults to "settler-<settlerID>".
                 maxLength: 63
                 pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                 type: string
               targetNamespaces:
                 description: targetNamespaces is a list of namespaces to create/manage
-                  for this project. If empty, defaults to ["project-<projectID>"].
+                  for this settler. If empty, defaults to ["settler-<settlerID>"].
                 items:
                   maxLength: 63
                   pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                   type: string
                 type: array
                 x-kubernetes-list-type: atomic
-              projectID:
-                description: projectID is the stable identifier for the project (used
+              settlerID:
+                description: settlerID is the stable identifier for the settler (used
                   for labels, naming, etc.)
                 maxLength: 63
                 minLength: 2
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                 type: string
             required:
-            - projectID
+            - settectID
             type: object
           status:
-            description: ProjectStatus defines the observed state of Project.
+            description: SettlerStatus defines the observed state of Settler.
             properties:
               limitRangeSummary:
                 description: limitRangeSummary is a human-friendly summary of enforced limits.
                 type: string
               namespaces:
-                description: namespaces managed for this project.
+                description: namespaces managed for this settler.
                 items:
                   type: string
                 type: array

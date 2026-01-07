@@ -25,22 +25,22 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// ProjectSpec defines the desired state of Project
-type ProjectSpec struct {
-	// projectID is the stable identifier for the project (used for labels, naming, etc.)
+// SettlerSpec defines the desired state of Settler
+type SettlerSpec struct {
+	// settlerID is the stable identifier for the settler (used for labels, naming, etc.)
 	// +kubebuilder:validation:MinLength=2
 	// +kubebuilder:validation:MaxLength=63
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
-	ProjectID string `json:"projectID"`
+	SettlerID string `json:"settlerID"`
 
-	// targetNamespace is the namespace name to create/manage. If empty, defaults to "project-<projectID>".
+	// targetNamespace is the namespace name to create/manage. If empty, defaults to "settler-<settlerID>".
 	// +kubebuilder:validation:MaxLength=63
 	// +kubebuilder:validation:Pattern=`^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
 	// +optional
 	TargetNamespace string `json:"targetNamespace,omitempty"`
 
 	// targetNamespaces is a list of namespaces to create/manage for this tenant.
-	// If empty, defaults to ["project-<projectID>"].
+	// If empty, defaults to ["settler-<settlerID>"].
 	// +optional
 	TargetNamespaces []string `json:"targetNamespaces,omitempty"`
 
@@ -95,9 +95,9 @@ type BaselinePolicy struct {
 	AllowedIngressPorts []int32 `json:"allowedIngressPorts,omitempty"`
 }
 
-// ProjectStatus defines the observed state of Project.
-type ProjectStatus struct {
-	// namespaces managed for this project.
+// SettlerStatus defines the observed state of Settler.
+type SettlerStatus struct {
+	// namespaces managed for this settler.
 	// +optional
 	Namespaces []string `json:"namespaces,omitempty"`
 
@@ -117,7 +117,7 @@ type ProjectStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// +kubebuilder:resource:scope=Cluster,shortName=proj
+// +kubebuilder:resource:scope=Cluster,shortName=sett
 // +kubebuilder:printcolumn:name="Namespaces",type=string,JSONPath=`.status.namespaces`
 // +kubebuilder:printcolumn:name="Quota",type=string,JSONPath=`.status.resourceQuotaSummary`
 // +kubebuilder:printcolumn:name="Limits",type=string,JSONPath=`.status.limitRangeSummary`
@@ -125,23 +125,23 @@ type ProjectStatus struct {
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-type Project struct {
+type Settler struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ProjectSpec   `json:"spec"`
-	Status ProjectStatus `json:"status,omitempty"`
+	Spec   SettlerSpec   `json:"spec"`
+	Status SettlerStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
 // +kubebuilder:object:root=true
-type ProjectList struct {
+type SettlerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Project `json:"items"`
+	Items           []Settler `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Project{}, &ProjectList{})
+	SchemeBuilder.Register(&Settler{}, &SettlerList{})
 }

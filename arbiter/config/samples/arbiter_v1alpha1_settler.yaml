@@ -1,11 +1,11 @@
 apiVersion: project-arbiter.io/v1alpha1
-kind: Project
+kind: Settler
 metadata:
   name: starcourt
 spec:
-  projectID: starcourt
-  # targetNamespace: project-starcourt   # optional; defaults to project-<projectID>
-  # targetNamespaces:             # optional; defaults to ["project-<projectID>"]
+  settlerID: starcourt
+  # targetNamespace: settler-starcourt   # optional; defaults to settler-<settlerID>
+  # targetNamespaces:             # optional; defaults to ["settler-<settlerID>"]
   #   - starcourt-mall
   #   - starcourt-ops
   # adminSubjects: []             # optional

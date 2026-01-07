@@ -4,20 +4,19 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.19.0
-  name: projects.project-arbiter.io
+  name: settlers.project-arbiter.io
 spec:
   group: project-arbiter.io
   names:
-    kind: Project
-    listKind: ProjectList
-    plural: projects
+    kind: Settler
+    listKind: SettlerList
+    plural: settlers
     shortNames:
-    - proj
-    singular: project
+    - sett
+    singular: settler
   scope: Cluster
   versions:
-  - name: v1alpha1
-    additionalPrinterColumns:
+  - additionalPrinterColumns:
     - jsonPath: .status.namespaces
       name: Namespaces
       type: string
@@ -33,6 +32,7 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         properties:
@@ -54,7 +54,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: ProjectSpec defines the desired state of Project
+            description: SettlerSpec defines the desired state of Settler
             properties:
               adminSubjects:
                 description: |-
@@ -247,49 +247,32 @@ spec:
                         x-kubernetes-list-type: atomic
                     type: object
                 type: object
-              targetNamespace:
-                description: targetNamespace is the namespace name to create/manage.
-                  If empty, defaults to "project-<projectID>".
-                maxLength: 63
-                pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                type: string
-              targetNamespaces:
-                description: targetNamespaces is a list of namespaces to create/manage
-                  for this project. If empty, defaults to ["project-<projectID>"].
-                items:
-                  maxLength: 63
-                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                  type: string
-                type: array
-                x-kubernetes-list-type: atomic
-              projectID:
-                description: projectID is the stable identifier for the project (used
+              settlerID:
+                description: settlerID is the stable identifier for the settler (used
                   for labels, naming, etc.)
                 maxLength: 63
                 minLength: 2
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                 type: string
-            required:
-            - projectID
-            type: object
-          status:
-            description: ProjectStatus defines the observed state of Project.
-            properties:
-              limitRangeSummary:
-                description: limitRangeSummary is a human-friendly summary of enforced limits.
+              targetNamespace:
+                description: targetNamespace is the namespace name to create/manage.
+                  If empty, defaults to "settler-<settlerID>".
+                maxLength: 63
+                pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                 type: string
-              namespaces:
-                description: namespaces managed for this project.
+              targetNamespaces:
+                description: |-
+                  targetNamespaces is a list of namespaces to create/manage for this tenant.
+                  If empty, defaults to ["settler-<settlerID>"].
                 items:
                   type: string
                 type: array
-                x-kubernetes-list-type: atomic
-              networkPolicySummary:
-                description: networkPolicySummary is a human-friendly summary of enforced network policy.
-                type: string
-              resourceQuotaSummary:
-                description: resourceQuotaSummary is a human-friendly summary of enforced quota.
-                type: string
+            required:
+            - settlerID
+            type: object
+          status:
+            description: SettlerStatus defines the observed state of Settler.
+            properties:
               conditions:
                 items:
                   description: Condition contains details for one aspect of the current
@@ -346,6 +329,23 @@ spec:
                   - type
                   type: object
                 type: array
+              limitRangeSummary:
+                description: limitRangeSummary is a human-friendly summary of enforced
+                  limits.
+                type: string
+              namespaces:
+                description: namespaces managed for this settler.
+                items:
+                  type: string
+                type: array
+              networkPolicySummary:
+                description: networkPolicySummary is a human-friendly summary of enforced
+                  network policy.
+                type: string
+              resourceQuotaSummary:
+                description: resourceQuotaSummary is a human-friendly summary of enforced
+                  quota.
+                type: string
             type: object
         required:
         - spec

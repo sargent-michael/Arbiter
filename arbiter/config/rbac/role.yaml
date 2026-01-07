@@ -8,28 +8,18 @@ rules:
   - ""
   resources:
   - limitranges
-  - namespaces
   - resourcequotas
   verbs:
   - create
-  - delete
   - get
   - list
   - patch
   - update
   - watch
 - apiGroups:
-  - project-arbiter.io
+  - ""
   resources:
-  - baselines
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - project-arbiter.io
-  resources:
-  - projects
+  - namespaces
   verbs:
   - create
   - delete
@@ -38,20 +28,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - project-arbiter.io
-  resources:
-  - projects/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - project-arbiter.io
-  resources:
-  - projects/status
-  verbs:
-  - get
-  - patch
-  - update
 - apiGroups:
   - networking.k8s.io
   resources:
@@ -63,6 +39,32 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - project-arbiter.io
+  resources:
+  - settlers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - project-arbiter.io
+  resources:
+  - settlers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - project-arbiter.io
+  resources:
+  - settlers/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
@@ -85,7 +87,6 @@ rules:
   - rolebindings
   verbs:
   - create
-  - delete
   - get
   - list
   - patch

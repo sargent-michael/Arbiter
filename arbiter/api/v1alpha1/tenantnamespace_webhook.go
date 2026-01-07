@@ -9,32 +9,32 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-// +kubebuilder:webhook:path=/mutate-project-arbiter-io-v1alpha1-project,mutating=true,failurePolicy=ignore,sideEffects=None,groups=project-arbiter.io,resources=projects,verbs=create;update,versions=v1alpha1,name=mproject.project-arbiter.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/mutate-project-arbiter-io-v1alpha1-settler,mutating=true,failurePolicy=ignore,sideEffects=None,groups=project-arbiter.io,resources=settlers,verbs=create;update,versions=v1alpha1,name=msettler.project-arbiter.io,admissionReviewVersions=v1
 
-var _ webhook.CustomDefaulter = &ProjectDefaulter{}
+var _ webhook.CustomDefaulter = &SettlerDefaulter{}
 
-type ProjectDefaulter struct{}
+type SettlerDefaulter struct{}
 
 // Default implements webhook.CustomDefaulter to apply defaults on create/update.
-func (d *ProjectDefaulter) Default(_ context.Context, obj runtime.Object) error {
-	tn, ok := obj.(*Project)
+func (d *SettlerDefaulter) Default(_ context.Context, obj runtime.Object) error {
+	tn, ok := obj.(*Settler)
 	if !ok {
-		return fmt.Errorf("expected *Project but got %T", obj)
+		return fmt.Errorf("expected *Settler but got %T", obj)
 	}
-	if tn.Spec.ProjectID == "" {
+	if tn.Spec.SettlerID == "" {
 		return nil
 	}
 
 	if tn.Spec.TargetNamespace == "" && len(tn.Spec.TargetNamespaces) == 0 {
-		tn.Spec.TargetNamespaces = []string{fmt.Sprintf("project-%s", tn.Spec.ProjectID)}
+		tn.Spec.TargetNamespaces = []string{fmt.Sprintf("settler-%s", tn.Spec.SettlerID)}
 	}
 	return nil
 }
 
 // SetupWebhookWithManager registers the webhook with the manager.
-func (r *Project) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (r *Settler) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
-		WithDefaulter(&ProjectDefaulter{}).
+		WithDefaulter(&SettlerDefaulter{}).
 		Complete()
 }

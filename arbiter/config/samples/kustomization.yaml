@@ -1,4 +1,4 @@
-## Append samples of your project ##
+## Append samples of your settler ##
 resources:
-- arbiter_v1alpha1_project.yaml
+- arbiter_v1alpha1_settler.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples
