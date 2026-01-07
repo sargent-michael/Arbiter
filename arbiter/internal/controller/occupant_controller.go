@@ -22,9 +22,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -40,6 +42,8 @@ type OccupantReconciler struct {
 const occupantFinalizer = "project-arbiter.io/occupant-cleanup"
 const occupantLabelKey = "project-arbiter.io/occupant"
 const namespaceModeLabelKey = "project-arbiter.io/namespace-mode"
+const observabilityLabelKey = "project-arbiter.io/observability"
+const observabilityProviderLabelKey = "project-arbiter.io/observability-provider"
 const defaultBaselineName = "default"
 
 var (
@@ -238,10 +242,14 @@ func (r *OccupantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 		adjustedPolicy = disableBaselinePolicy(policy)
 	}
 
+	enabledCapabilities := resolveCapabilities(&occ, adjustedPolicy)
+	obsEnabled := hasCapability(enabledCapabilities, "obs")
+	obsProvider := strings.TrimSpace(occ.Spec.ExternalIntegrations.Observability)
+
 	driftCount := int32(0)
 
 	for _, targetNS := range managedNamespaces {
-		namespaceDrift, err := r.reconcileNamespace(ctx, &occ, targetNS, occupantID, enforcementMode, false, adjustedPolicy)
+		namespaceDrift, err := r.reconcileNamespace(ctx, &occ, targetNS, occupantID, enforcementMode, obsEnabled, obsProvider, false, adjustedPolicy)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -249,7 +257,7 @@ func (r *OccupantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 	}
 
 	for _, adoptedNS := range adoptedNamespaces {
-		namespaceDrift, err := r.reconcileNamespace(ctx, &occ, adoptedNS, occupantID, enforcementMode, true, adjustedPolicy)
+		namespaceDrift, err := r.reconcileNamespace(ctx, &occ, adoptedNS, occupantID, enforcementMode, obsEnabled, obsProvider, true, adjustedPolicy)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -275,14 +283,13 @@ func (r *OccupantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 	occ.Status.ResourceQuotaSummary = summarizeResourceQuota(adjustedPolicy)
 	occ.Status.LimitRangeSummary = summarizeLimitRange(adjustedPolicy)
 	occ.Status.NetworkPolicySummary = summarizeNetworkPolicy(adjustedPolicy)
-	occ.Status.EnabledCapabilities = resolveCapabilities(&occ, adjustedPolicy)
+	occ.Status.EnabledCapabilities = enabledCapabilities
 	occ.Status.CapabilitiesSummary = summarizeCapabilities(occ.Status.EnabledCapabilities)
 	occ.Status.IdentityBindings = summarizeIdentityBindings(occ.Spec.AdminSubjects)
 	occ.Status.EnforcementStatus = enforcementMode
 	occ.Status.ExternalIntegrations = summarizeExternalIntegrations(occ.Spec.ExternalIntegrations)
 	occ.Status.DriftCount = driftCount
 	occ.Status.DriftSummary = fmt.Sprintf("%d", driftCount)
-	occ.Status.ReconcileCount = occ.Status.ReconcileCount + 1
 	if driftCount > 0 {
 		occ.Status.Health = "WARN"
 	} else {
@@ -386,12 +393,14 @@ func (r *OccupantReconciler) reconcileNamespace(
 	ctx context.Context,
 	occ *platformv1alpha1.Occupant,
 	nsName, occupantID, enforcementMode string,
+	obsEnabled bool,
+	obsProvider string,
 	adopted bool,
 	policy platformv1alpha1.BaselinePolicy,
 ) (int32, error) {
 	drift := int32(0)
 
-	changed, err := r.ensureNamespace(ctx, occ, nsName, occupantID, enforcementMode, adopted)
+	changed, err := r.ensureNamespace(ctx, occ, nsName, occupantID, enforcementMode, obsEnabled, obsProvider, adopted)
 	if err != nil {
 		return drift, err
 	}
@@ -449,14 +458,14 @@ func (r *OccupantReconciler) reconcileNamespace(
 	return drift, nil
 }
 
-func (r *OccupantReconciler) ensureNamespace(ctx context.Context, occ *platformv1alpha1.Occupant, nsName, occupantID, enforcementMode string, adopted bool) (bool, error) {
+func (r *OccupantReconciler) ensureNamespace(ctx context.Context, occ *platformv1alpha1.Occupant, nsName, occupantID, enforcementMode string, obsEnabled bool, obsProvider string, adopted bool) (bool, error) {
 	var ns corev1.Namespace
 	err := r.Get(ctx, types.NamespacedName{Name: nsName}, &ns)
 	if apierrors.IsNotFound(err) {
 		if adopted {
 			return false, fmt.Errorf("adopted namespace %q does not exist", nsName)
 		}
-		labels := baseNamespaceLabels(occupantID, enforcementMode, adopted)
+		labels := baseNamespaceLabels(occupantID, enforcementMode, obsEnabled, obsProvider, adopted)
 		ns = corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   nsName,
@@ -472,7 +481,7 @@ func (r *OccupantReconciler) ensureNamespace(ctx context.Context, occ *platformv
 		return false, err
 	}
 
-	desired := baseNamespaceLabels(occupantID, enforcementMode, adopted)
+	desired := baseNamespaceLabels(occupantID, enforcementMode, obsEnabled, obsProvider, adopted)
 	if ns.Labels == nil {
 		ns.Labels = map[string]string{}
 	}
@@ -945,8 +954,29 @@ func (r *OccupantReconciler) deleteNetworkPolicy(ctx context.Context, name, ns s
 }
 
 func (r *OccupantReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	updatePredicate := predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldOcc, ok := e.ObjectOld.(*platformv1alpha1.Occupant)
+			if !ok {
+				return true
+			}
+			newOcc, ok := e.ObjectNew.(*platformv1alpha1.Occupant)
+			if !ok {
+				return true
+			}
+			if !reflect.DeepEqual(oldOcc.Spec, newOcc.Spec) {
+				return true
+			}
+			return !reflect.DeepEqual(oldOcc.Annotations, newOcc.Annotations)
+		},
+		CreateFunc: func(event.CreateEvent) bool { return true },
+		DeleteFunc: func(event.DeleteEvent) bool { return true },
+		GenericFunc: func(event.GenericEvent) bool { return true },
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&platformv1alpha1.Occupant{}).
+		WithEventFilter(updatePredicate).
 		Owns(&corev1.Namespace{}).
 		Owns(&corev1.ResourceQuota{}).
 		Owns(&corev1.LimitRange{}).
@@ -1150,7 +1180,7 @@ func disableBaselinePolicy(policy platformv1alpha1.BaselinePolicy) platformv1alp
 	return disabled
 }
 
-func baseNamespaceLabels(occupantID, enforcementMode string, adopted bool) map[string]string {
+func baseNamespaceLabels(occupantID, enforcementMode string, obsEnabled bool, obsProvider string, adopted bool) map[string]string {
 	enforceLevel := "baseline"
 	if enforcementMode == "Permissive" {
 		enforceLevel = "privileged"
@@ -1159,13 +1189,20 @@ func baseNamespaceLabels(occupantID, enforcementMode string, adopted bool) map[s
 	if adopted {
 		modeLabel = "adopted"
 	}
-	return map[string]string{
+	labels := map[string]string{
 		occupantLabelKey:                     occupantID,
 		namespaceModeLabelKey:                modeLabel,
 		"pod-security.kubernetes.io/enforce": enforceLevel,
 		"pod-security.kubernetes.io/audit":   enforceLevel,
 		"pod-security.kubernetes.io/warn":    enforceLevel,
 	}
+	if obsEnabled {
+		labels[observabilityLabelKey] = "enabled"
+		if obsProvider != "" {
+			labels[observabilityProviderLabelKey] = obsProvider
+		}
+	}
+	return labels
 }
 
 func labelsContain(existing, expected map[string]string) bool {
@@ -1234,6 +1271,15 @@ func resolveCapabilities(occ *platformv1alpha1.Occupant, policy platformv1alpha1
 	}
 	sort.Strings(remaining)
 	return append(ordered, remaining...)
+}
+
+func hasCapability(caps []string, value string) bool {
+	for _, capName := range caps {
+		if strings.EqualFold(capName, value) {
+			return true
+		}
+	}
+	return false
 }
 
 func summarizeCapabilities(caps []string) string {

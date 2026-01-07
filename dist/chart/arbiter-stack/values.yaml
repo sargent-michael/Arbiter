@@ -1,13 +1,15 @@
 arbiter:
   image:
     repository: ghcr.io/sargent-michael/arbiter
-    tag: "1.0.10"
+    tag: "1.0.12"
   metrics:
     enabled: true
     serviceMonitor:
       enabled: false
     reader:
-      enabled: false
+      enabled: true
+      prometheusServiceAccountName: arbiter-stack-prometheus-server
+      prometheusNamespace: arbiter-system
   webhook:
     enabled: true
   certManager:
@@ -25,6 +27,7 @@ prometheus:
           scheme: https
           tls_config:
             insecure_skip_verify: true
+          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
           static_configs:
             - targets:
                 - arbiter-stack-arbiter-controller-manager-metrics-service.arbiter-system.svc:8443

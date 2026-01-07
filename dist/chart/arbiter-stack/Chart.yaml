@@ -2,11 +2,11 @@ apiVersion: v2
 name: arbiter-stack
 description: Arbiter with minimal Prometheus, Grafana, and Loki stack.
 type: application
-version: 0.1.16
-appVersion: "1.0.10"
+version: 0.1.18
+appVersion: "1.0.12"
 dependencies:
   - name: arbiter
-    version: 0.1.16
+    version: 0.1.18
     repository: "https://sargent-michael.github.io/Arbiter"
   - name: cert-manager
     version: 1.15.3

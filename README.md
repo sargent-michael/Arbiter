@@ -40,8 +40,8 @@ helm repo update
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.10 \
-  --version 0.1.16
+  --set arbiter.image.tag=1.0.12 \
+  --version 0.1.18
 kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 ```
 
@@ -66,8 +66,8 @@ helm repo update
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.10 \
-  --version 0.1.16
+  --set arbiter.image.tag=1.0.12 \
+  --version 0.1.18
 
 kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 ```
@@ -84,8 +84,8 @@ If the CRDs already exist (from a previous install), use `--skip-crds`:
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.10 \
-  --version 0.1.16 \
+  --set arbiter.image.tag=1.0.12 \
+  --version 0.1.18 \
   --skip-crds
 ```
 
@@ -182,6 +182,9 @@ Metrics are exposed on the controller manager metrics service.
 kubectl get svc -n arbiter-system arbiter-stack-controller-manager-metrics-service
 ```
 
+The stack chart configures Prometheus to scrape these metrics using its service account.
+If you install the standalone chart, ensure your Prometheus has a token and RBAC for `/metrics`.
+
 Grafana dashboards and Loki datasources are installed by the stack chart:
 
 ```bash
@@ -189,6 +192,9 @@ kubectl port-forward -n arbiter-system svc/arbiter-stack-grafana 3000:80
 ```
 
 Prometheus and Loki are exposed inside the cluster; Grafana is prewired to both.
+
+When `obs` is enabled (via `spec.capabilities` or `spec.externalIntegrations.observability`),
+managed namespaces are labeled with `project-arbiter.io/observability=enabled`.
 
 ---
 
@@ -205,9 +211,9 @@ kubectl delete occ <occupant>
 Example `kubectl get occupants` output:
 
 ```
-NAME          NAMESPACES        ENFORCEMENT   CAPABILITIES        HEALTH   RECONCILES
-hellfire      3 (managed)       Enforcing     rbac,net,obs,ci     OK       12
-starcourt     1 (adopted)       Permissive    rbac,obs            WARN     4
+NAME          NAMESPACES        ENFORCEMENT   CAPABILITIES        HEALTH
+hellfire      3 (managed)       Enforcing     rbac,net,obs,ci     OK
+starcourt     1 (adopted)       Permissive    rbac,obs            WARN
 ```
 
 `kubectl describe project <project-id>` now includes:
