@@ -160,9 +160,9 @@ type OccupantStatus struct {
 	// +optional
 	IdentityBindings string `json:"identityBindings,omitempty"`
 
-	// enforcementConfirmation confirms whether policies were enforced or skipped.
+	// enforcementStatus reflects the current enforcement mode.
 	// +optional
-	EnforcementConfirmation string `json:"enforcementConfirmation,omitempty"`
+	EnforcementStatus string `json:"enforcementStatus,omitempty"`
 
 	// externalIntegrations summarizes external integrations.
 	// +optional
@@ -194,6 +194,7 @@ type OccupantStatus struct {
 
 // +kubebuilder:resource:scope=Cluster,shortName=occ;project
 // +kubebuilder:printcolumn:name="Namespaces",type=string,JSONPath=`.status.namespacesSummary`
+// +kubebuilder:printcolumn:name="Enforcement",type=string,JSONPath=`.spec.enforcementMode`
 // +kubebuilder:printcolumn:name="Capabilities",type=string,JSONPath=`.status.capabilitiesSummary`
 // +kubebuilder:printcolumn:name="Health",type=string,JSONPath=`.status.health`
 // +kubebuilder:printcolumn:name="Drift",type=string,JSONPath=`.status.driftSummary`

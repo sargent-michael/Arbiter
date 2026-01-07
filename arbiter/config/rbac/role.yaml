@@ -8,18 +8,8 @@ rules:
   - ""
   resources:
   - limitranges
-  - resourcequotas
-  verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - namespaces
+  - resourcequotas
   verbs:
   - create
   - delete
@@ -34,6 +24,7 @@ rules:
   - networkpolicies
   verbs:
   - create
+  - delete
   - get
   - list
   - patch

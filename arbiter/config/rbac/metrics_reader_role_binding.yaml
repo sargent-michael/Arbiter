@@ -8,5 +8,9 @@ roleRef:
   name: metrics-reader
 subjects:
 - kind: ServiceAccount
-  name: kube-prometheus-stack-prometheus
-  namespace: kube-prometheus-stack
+  # Update these values to match your Prometheus ServiceAccount.
+  # For the arbiter-stack chart defaults, use:
+  # name: arbiter-stack-prometheus-server
+  # namespace: arbiter-system
+  name: prometheus-server
+  namespace: monitoring

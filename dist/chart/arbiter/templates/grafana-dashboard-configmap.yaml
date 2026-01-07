@@ -10,4 +10,6 @@ metadata:
 data:
   arbiter-dashboard.json: |-
 {{ .Files.Get "grafana/arbiter-dashboard.json" | indent 4 }}
+  arbiter-occupant-dashboard.json: |-
+{{ .Files.Get "grafana/arbiter-occupant-dashboard.json" | indent 4 }}
 {{- end -}}

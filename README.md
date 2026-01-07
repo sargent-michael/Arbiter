@@ -21,8 +21,9 @@ with continuous reconciliation.
 - Global Baseline with per-occupant overrides for quotas, limits, and network policy
 - Status summaries in `kubectl get occupants` for fast validation
 - Managed namespaces can be `Enforcing` or `Permissive`
-- Helm stack installs cert-manager, Prometheus, Grafana, and Arbiter together
+- Helm stack installs cert-manager, Prometheus, Grafana, Loki, and Arbiter together
 - Metrics and dashboards included out of the box
+- Per-occupant metrics with a dedicated Grafana dashboard
 
 ---
 
@@ -39,9 +40,8 @@ helm repo update
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.4 \
-  --version 0.1.7 \
-  --set kube-prometheus-stack.enabled=true
+  --set arbiter.image.tag=1.0.8 \
+  --version 0.1.12
 kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 ```
 
@@ -66,8 +66,8 @@ helm repo update
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.4 \
-  --version 0.1.7
+  --set arbiter.image.tag=1.0.8 \
+  --version 0.1.12
 
 kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 ```
@@ -84,8 +84,8 @@ If the CRDs already exist (from a previous install), use `--skip-crds`:
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.4 \
-  --version 0.1.7 \
+  --set arbiter.image.tag=1.0.8 \
+  --version 0.1.12 \
   --skip-crds
 ```
 
@@ -182,11 +182,13 @@ Metrics are exposed on the controller manager metrics service.
 kubectl get svc -n arbiter-system arbiter-stack-controller-manager-metrics-service
 ```
 
-Grafana dashboard is installed by the stack chart:
+Grafana dashboards and Loki datasources are installed by the stack chart:
 
 ```bash
 kubectl port-forward -n arbiter-system svc/arbiter-stack-grafana 3000:80
 ```
+
+Prometheus and Loki are exposed inside the cluster; Grafana is prewired to both.
 
 ---
 
@@ -203,16 +205,16 @@ kubectl delete occ <occupant>
 Example `kubectl get occupants` output:
 
 ```
-NAME          NAMESPACES        CAPABILITIES        HEALTH   DRIFT
-hellfire      3 (managed)       rbac,net,obs,ci     OK       0
-starcourt     1 (adopted)       rbac,obs            WARN     2
+NAME          NAMESPACES        ENFORCEMENT   CAPABILITIES        HEALTH   DRIFT
+hellfire      3 (managed)       Enforcing     rbac,net,obs,ci     OK       0
+starcourt     1 (adopted)       Permissive    rbac,obs            WARN     2
 ```
 
 `kubectl describe project <project-id>` now includes:
 
 - Identity bindings (groups/users)
 - Enabled capabilities
-- Enforcement confirmation
+- Enforcement status (Enforcing/Permissive)
 - Drift summary
 - External integrations (CI, observability, cost)
 - Last reconciliation outcome

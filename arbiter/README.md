@@ -31,9 +31,15 @@ Prometheus metrics are exposed on the controller manager metrics service and inc
 - `arbiter_reconcile_total`
 - `arbiter_reconcile_errors_total`
 - `arbiter_reconcile_duration_seconds`
+- `arbiter_occupant_reconcile_total`
+- `arbiter_occupant_reconcile_duration_seconds`
+- `arbiter_occupant_namespaces`
+- `arbiter_occupant_drift_count`
+- `arbiter_occupant_info`
+- `arbiter_occupant_enforcement_mode`
 
-For kube-prometheus-stack, the default config includes a ServiceMonitor and a
-ClusterRoleBinding for the Prometheus service account.
+The stack chart deploys a minimal Prometheus + Grafana + Loki setup and includes
+a ServiceMonitor and Grafana dashboard ConfigMap for Arbiter metrics.
 
 ## Local Development
 
@@ -48,6 +54,7 @@ make run
 ## Build and Deploy
 
 ```sh
+cd arbiter
 make docker-build docker-push IMG=<some-registry>/arbiter:tag
 ```
 

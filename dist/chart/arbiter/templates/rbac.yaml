@@ -65,6 +65,7 @@ rules:
   - patch
   - update
   - watch
+  - delete
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:

@@ -65,10 +65,63 @@ var (
 		},
 		[]string{"controller", "result"},
 	)
+	occupantReconcileTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "arbiter_occupant_reconcile_total",
+			Help: "Total number of occupant reconciliations.",
+		},
+		[]string{"occupant", "result"},
+	)
+	occupantReconcileDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "arbiter_occupant_reconcile_duration_seconds",
+			Help:    "Occupant reconciliation duration in seconds.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"occupant", "result"},
+	)
+	occupantNamespaces = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "arbiter_occupant_namespaces",
+			Help: "Count of namespaces by occupant and mode.",
+		},
+		[]string{"occupant", "mode"},
+	)
+	occupantDriftCount = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "arbiter_occupant_drift_count",
+			Help: "Drift corrections detected for the occupant.",
+		},
+		[]string{"occupant"},
+	)
+	occupantInfo = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "arbiter_occupant_info",
+			Help: "Occupant metadata for dashboards (value is always 1).",
+		},
+		[]string{"occupant", "enforcement", "capabilities", "health", "outcome"},
+	)
+	occupantEnforcementMode = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "arbiter_occupant_enforcement_mode",
+			Help: "Enforcement mode for the occupant (1 for active mode).",
+		},
+		[]string{"occupant", "mode"},
+	)
 )
 
 func init() {
-	metrics.Registry.MustRegister(reconcileTotal, reconcileErrors, reconcileDuration)
+	metrics.Registry.MustRegister(
+		reconcileTotal,
+		reconcileErrors,
+		reconcileDuration,
+		occupantReconcileTotal,
+		occupantReconcileDuration,
+		occupantNamespaces,
+		occupantDriftCount,
+		occupantInfo,
+		occupantEnforcementMode,
+	)
 }
 
 // +kubebuilder:rbac:groups=project-arbiter.io,resources=occupants,verbs=get;list;watch;create;update;patch;delete
@@ -77,8 +130,8 @@ func init() {
 
 // Core resources we manage
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=resourcequotas;limitranges,verbs=get;list;watch;create;update;patch
-// +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups="",resources=resourcequotas;limitranges,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 
 // RBAC resources we manage
 // We only create RoleBindings (NOT Roles)
@@ -91,6 +144,7 @@ func init() {
 func (r *OccupantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
 	log := logf.FromContext(ctx)
 	start := time.Now()
+	occupantName := req.Name
 	defer func() {
 		outcome := "success"
 		if err != nil {
@@ -99,12 +153,17 @@ func (r *OccupantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 		}
 		reconcileTotal.WithLabelValues("occupant", outcome).Inc()
 		reconcileDuration.WithLabelValues("occupant", outcome).Observe(time.Since(start).Seconds())
+		if occupantName != "" {
+			occupantReconcileTotal.WithLabelValues(occupantName, outcome).Inc()
+			occupantReconcileDuration.WithLabelValues(occupantName, outcome).Observe(time.Since(start).Seconds())
+		}
 	}()
 
 	var occ platformv1alpha1.Occupant
 	if err := r.Get(ctx, req.NamespacedName, &occ); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	occupantName = occ.Name
 
 	if !occ.ObjectMeta.DeletionTimestamp.IsZero() {
 		if controllerutil.ContainsFinalizer(&occ, occupantFinalizer) {
@@ -219,7 +278,7 @@ func (r *OccupantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 	occ.Status.EnabledCapabilities = resolveCapabilities(&occ, adjustedPolicy)
 	occ.Status.CapabilitiesSummary = summarizeCapabilities(occ.Status.EnabledCapabilities)
 	occ.Status.IdentityBindings = summarizeIdentityBindings(occ.Spec.AdminSubjects)
-	occ.Status.EnforcementConfirmation = summarizeEnforcement(enforcementMode)
+	occ.Status.EnforcementStatus = enforcementMode
 	occ.Status.ExternalIntegrations = summarizeExternalIntegrations(occ.Spec.ExternalIntegrations)
 	occ.Status.DriftCount = driftCount
 	occ.Status.DriftSummary = fmt.Sprintf("%d", driftCount)
@@ -239,7 +298,46 @@ func (r *OccupantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 		return ctrl.Result{}, err
 	}
 
+	updateOccupantMetrics(&occ, enforcementMode, driftCount, managedNamespaces, adoptedNamespaces)
 	return ctrl.Result{}, nil
+}
+
+func updateOccupantMetrics(
+	occ *platformv1alpha1.Occupant,
+	enforcementMode string,
+	driftCount int32,
+	managedNamespaces []string,
+	adoptedNamespaces []string,
+) {
+	occupantName := occ.Name
+	occupantNamespaces.WithLabelValues(occupantName, "managed").Set(float64(len(managedNamespaces)))
+	occupantNamespaces.WithLabelValues(occupantName, "adopted").Set(float64(len(adoptedNamespaces)))
+	occupantDriftCount.WithLabelValues(occupantName).Set(float64(driftCount))
+
+	occupantEnforcementMode.WithLabelValues(occupantName, "enforcing").Set(boolToGauge(enforcementMode == "Enforcing"))
+	occupantEnforcementMode.WithLabelValues(occupantName, "permissive").Set(boolToGauge(enforcementMode == "Permissive"))
+
+	health := occ.Status.Health
+	if health == "" {
+		health = "unknown"
+	}
+	outcome := occ.Status.LastReconciliationOutcome
+	if outcome == "" {
+		outcome = "unknown"
+	}
+	capabilities := occ.Status.CapabilitiesSummary
+	if capabilities == "" {
+		capabilities = "none"
+	}
+
+	occupantInfo.WithLabelValues(occupantName, enforcementMode, capabilities, health, outcome).Set(1)
+}
+
+func boolToGauge(value bool) float64 {
+	if value {
+		return 1
+	}
+	return 0
 }
 
 func (r *OccupantReconciler) finalizeOccupant(ctx context.Context, occ *platformv1alpha1.Occupant) (bool, error) {
@@ -332,6 +430,13 @@ func (r *OccupantReconciler) reconcileNamespace(
 			return drift, err
 		}
 		drift += int32(networkDrift)
+	}
+	if enforcementMode == "Permissive" && !adopted {
+		cleanupDrift, err := r.cleanupBaselineResources(ctx, nsName)
+		if err != nil {
+			return drift, err
+		}
+		drift += cleanupDrift
 	}
 	return drift, nil
 }
@@ -691,6 +796,65 @@ func (r *OccupantReconciler) ensureNetworkPolicy(ctx context.Context, owner clie
 	return true, r.Update(ctx, &current)
 }
 
+func (r *OccupantReconciler) cleanupBaselineResources(ctx context.Context, ns string) (int32, error) {
+	var drift int32
+	if deleted, err := r.deleteResourceQuota(ctx, "tenant-quota", ns); err != nil {
+		return drift, err
+	} else if deleted {
+		drift++
+	}
+	if deleted, err := r.deleteLimitRange(ctx, "tenant-limits", ns); err != nil {
+		return drift, err
+	} else if deleted {
+		drift++
+	}
+	networkNames := []string{"default-deny-all", "allow-https-ingress", "allow-dns-egress"}
+	for _, name := range networkNames {
+		if deleted, err := r.deleteNetworkPolicy(ctx, name, ns); err != nil {
+			return drift, err
+		} else if deleted {
+			drift++
+		}
+	}
+	return drift, nil
+}
+
+func (r *OccupantReconciler) deleteResourceQuota(ctx context.Context, name, ns string) (bool, error) {
+	var rq corev1.ResourceQuota
+	err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: ns}, &rq)
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, r.Delete(ctx, &rq)
+}
+
+func (r *OccupantReconciler) deleteLimitRange(ctx context.Context, name, ns string) (bool, error) {
+	var lr corev1.LimitRange
+	err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: ns}, &lr)
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, r.Delete(ctx, &lr)
+}
+
+func (r *OccupantReconciler) deleteNetworkPolicy(ctx context.Context, name, ns string) (bool, error) {
+	var np netv1.NetworkPolicy
+	err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: ns}, &np)
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, r.Delete(ctx, &np)
+}
+
 func (r *OccupantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&platformv1alpha1.Occupant{}).
@@ -1020,13 +1184,6 @@ func summarizeExternalIntegrations(integrations platformv1alpha1.ExternalIntegra
 		return "none"
 	}
 	return strings.Join(parts, " ")
-}
-
-func summarizeEnforcement(mode string) string {
-	if mode == "Permissive" {
-		return "permissive (policies skipped)"
-	}
-	return "enforcing (policies applied)"
 }
 
 func summarizeResourceQuota(policy platformv1alpha1.BaselinePolicy) string {

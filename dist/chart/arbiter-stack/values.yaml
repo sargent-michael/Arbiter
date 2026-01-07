@@ -1,17 +1,13 @@
 arbiter:
   image:
     repository: ghcr.io/sargent-michael/arbiter
-    tag: "1.0.3"
+    tag: "1.0.8"
   metrics:
     enabled: true
     serviceMonitor:
-      enabled: true
-      labels:
-        release: kube-prometheus-stack
+      enabled: false
     reader:
-      enabled: true
-      prometheusServiceAccountName: kube-prometheus-stack-prometheus
-      prometheusNamespace: kube-prometheus-stack
+      enabled: false
   webhook:
     enabled: true
   certManager:
@@ -19,21 +15,53 @@ arbiter:
   grafanaDashboard:
     enabled: true
 
-kube-prometheus-stack:
+prometheus:
   enabled: true
-  fullnameOverride: kube-prometheus-stack
-  grafana:
-    enabled: true
-    sidecar:
-      dashboards:
-        enabled: true
-        label: grafana_dashboard
-        labelValue: "1"
-  prometheus:
-    prometheusSpec:
-      serviceMonitorSelectorNilUsesHelmValues: false
-      serviceMonitorSelector: {}
-      serviceMonitorNamespaceSelector: {}
+  fullnameOverride: arbiter-stack-prometheus
+  serverFiles:
+    prometheus.yml:
+      scrape_configs:
+        - job_name: arbiter-controller
+          scheme: https
+          tls_config:
+            insecure_skip_verify: true
+          static_configs:
+            - targets:
+                - arbiter-stack-arbiter-controller-manager-metrics-service.arbiter-system.svc:8443
+
+grafana:
+  enabled: true
+  fullnameOverride: arbiter-stack-grafana
+  adminPassword: arbiter
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          access: proxy
+          url: http://arbiter-stack-prometheus-server
+          isDefault: true
+        - name: Loki
+          type: loki
+          access: proxy
+          url: http://arbiter-stack-loki:3100
+
+loki:
+  enabled: true
+  fullnameOverride: arbiter-stack-loki
+
+promtail:
+  enabled: true
+  fullnameOverride: arbiter-stack-promtail
+  config:
+    clients:
+      - url: http://arbiter-stack-loki:3100/loki/api/v1/push
 
 cert-manager:
   enabled: true

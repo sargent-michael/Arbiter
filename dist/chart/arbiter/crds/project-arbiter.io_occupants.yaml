@@ -17,10 +17,12 @@ spec:
     singular: occupant
   scope: Cluster
   versions:
-  - name: v1alpha1
-    additionalPrinterColumns:
+  - additionalPrinterColumns:
     - jsonPath: .status.namespacesSummary
       name: Namespaces
+      type: string
+    - jsonPath: .spec.enforcementMode
+      name: Enforcement
       type: string
     - jsonPath: .status.capabilitiesSummary
       name: Capabilities
@@ -31,6 +33,7 @@ spec:
     - jsonPath: .status.driftSummary
       name: Drift
       type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         properties:
@@ -78,6 +81,12 @@ spec:
                   - kind
                   - name
                   type: object
+                type: array
+              adoptedNamespaces:
+                description: adoptedNamespaces are existing namespaces Arbiter should
+                  adopt without owning deletion lifecycle.
+                items:
+                  type: string
                 type: array
               baselinePolicy:
                 description: baselinePolicy enables default quota/limits/network policy.
@@ -245,6 +254,40 @@ spec:
                         x-kubernetes-list-type: atomic
                     type: object
                 type: object
+              capabilities:
+                description: capabilities lists declared capabilities to expose in
+                  status summaries.
+                items:
+                  type: string
+                type: array
+              enforcementMode:
+                description: enforcementMode controls whether Arbiter enforces baseline
+                  policies on managed namespaces.
+                enum:
+                - Enforcing
+                - Permissive
+                type: string
+              externalIntegrations:
+                description: externalIntegrations describe optional integrations for
+                  this occupant.
+                properties:
+                  ci:
+                    description: ci integration provider or label.
+                    type: string
+                  cost:
+                    description: cost integration provider or label.
+                    type: string
+                  observability:
+                    description: observability integration provider or label.
+                    type: string
+                type: object
+              occupantID:
+                description: occupantID is the stable identifier for the occupant
+                  (used for labels, naming, etc.)
+                maxLength: 63
+                minLength: 2
+                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                type: string
               targetNamespace:
                 description: targetNamespace is the namespace name to create/manage.
                   If empty, defaults to "occupant-<occupantID>".
@@ -252,50 +295,12 @@ spec:
                 pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                 type: string
               targetNamespaces:
-                description: targetNamespaces is a list of namespaces to create/manage
-                  for this occupant. If empty, defaults to ["occupant-<occupantID>"].
-                items:
-                  maxLength: 63
-                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                  type: string
-                type: array
-                x-kubernetes-list-type: atomic
-              adoptedNamespaces:
-                description: adoptedNamespaces are existing namespaces Arbiter should adopt without owning deletion lifecycle.
+                description: |-
+                  targetNamespaces is a list of namespaces to create/manage for this tenant.
+                  If empty, defaults to ["occupant-<occupantID>"].
                 items:
                   type: string
                 type: array
-              enforcementMode:
-                description: enforcementMode controls whether Arbiter enforces baseline policies on managed namespaces.
-                enum:
-                - Enforcing
-                - Permissive
-                type: string
-              capabilities:
-                description: capabilities lists declared capabilities to expose in status summaries.
-                items:
-                  type: string
-                type: array
-              externalIntegrations:
-                description: externalIntegrations describe optional integrations for this occupant.
-                properties:
-                  ci:
-                    description: ci integration provider or label.
-                    type: string
-                  observability:
-                    description: observability integration provider or label.
-                    type: string
-                  cost:
-                    description: cost integration provider or label.
-                    type: string
-                type: object
-              occupantID:
-                description: occupantID is the stable identifier for the occupant (used
-                  for labels, naming, etc.)
-                maxLength: 63
-                minLength: 2
-                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                type: string
             required:
             - occupantID
             type: object
@@ -304,55 +309,6 @@ spec:
             properties:
               capabilitiesSummary:
                 description: capabilitiesSummary is a human-friendly summary of capabilities.
-                type: string
-              namespacesSummary:
-                description: namespacesSummary is a summary of managed/adopted namespace counts.
-                type: string
-              enabledCapabilities:
-                description: enabledCapabilities is the computed list of enabled capabilities.
-                items:
-                  type: string
-                type: array
-              health:
-                description: health is a coarse health summary (OK/WARN/ERROR).
-                type: string
-              driftCount:
-                description: driftCount is the number of drift corrections detected in the last reconcile.
-                format: int32
-                type: integer
-              driftSummary:
-                description: driftSummary is a human-friendly drift summary.
-                type: string
-              identityBindings:
-                description: identityBindings is a human-friendly summary of admin subjects.
-                type: string
-              enforcementConfirmation:
-                description: enforcementConfirmation confirms whether policies were enforced or skipped.
-                type: string
-              externalIntegrations:
-                description: externalIntegrations summarizes external integrations.
-                type: string
-              lastReconciliationOutcome:
-                description: lastReconciliationOutcome is the last reconcile outcome.
-                type: string
-              lastReconciliationTime:
-                description: lastReconciliationTime is the time of the last reconcile.
-                format: date-time
-                type: string
-              limitRangeSummary:
-                description: limitRangeSummary is a human-friendly summary of enforced limits.
-                type: string
-              namespaces:
-                description: namespaces managed for this occupant.
-                items:
-                  type: string
-                type: array
-                x-kubernetes-list-type: atomic
-              networkPolicySummary:
-                description: networkPolicySummary is a human-friendly summary of enforced network policy.
-                type: string
-              resourceQuotaSummary:
-                description: resourceQuotaSummary is a human-friendly summary of enforced quota.
                 type: string
               conditions:
                 items:
@@ -410,6 +366,60 @@ spec:
                   - type
                   type: object
                 type: array
+              driftCount:
+                description: driftCount is the number of drift corrections detected
+                  in the last reconcile.
+                format: int32
+                type: integer
+              driftSummary:
+                description: driftSummary is a human-friendly drift summary.
+                type: string
+              enabledCapabilities:
+                description: enabledCapabilities is the computed list of enabled capabilities.
+                items:
+                  type: string
+                type: array
+              enforcementStatus:
+                description: enforcementStatus reflects the current enforcement mode.
+                type: string
+              externalIntegrations:
+                description: externalIntegrations summarizes external integrations.
+                type: string
+              health:
+                description: health is a coarse health summary (OK/WARN/ERROR).
+                type: string
+              identityBindings:
+                description: identityBindings is a human-friendly summary of admin
+                  subjects.
+                type: string
+              lastReconciliationOutcome:
+                description: lastReconciliationOutcome is the last reconcile outcome.
+                type: string
+              lastReconciliationTime:
+                description: lastReconciliationTime is the time of the last reconcile.
+                format: date-time
+                type: string
+              limitRangeSummary:
+                description: limitRangeSummary is a human-friendly summary of enforced
+                  limits.
+                type: string
+              namespaces:
+                description: namespaces managed for this occupant.
+                items:
+                  type: string
+                type: array
+              namespacesSummary:
+                description: namespacesSummary is a summary of managed/adopted namespace
+                  counts.
+                type: string
+              networkPolicySummary:
+                description: networkPolicySummary is a human-friendly summary of enforced
+                  network policy.
+                type: string
+              resourceQuotaSummary:
+                description: resourceQuotaSummary is a human-friendly summary of enforced
+                  quota.
+                type: string
             type: object
         required:
         - spec

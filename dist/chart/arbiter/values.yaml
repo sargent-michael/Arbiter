@@ -3,7 +3,7 @@ fullnameOverride: ""
 
 image:
   repository: ghcr.io/sargent-michael/arbiter
-  tag: "1.0.3"
+  tag: "1.0.8"
   pullPolicy: IfNotPresent
 
 createNamespace: false
@@ -19,14 +19,13 @@ metrics:
   enabled: true
   serviceMonitor:
     enabled: true
-    labels:
-      release: kube-prometheus-stack
+    labels: {}
     interval: 30s
     scrapeTimeout: 10s
   reader:
-    enabled: true
-    prometheusServiceAccountName: kube-prometheus-stack-prometheus
-    prometheusNamespace: kube-prometheus-stack
+    enabled: false
+    prometheusServiceAccountName: ""
+    prometheusNamespace: ""
 
 webhook:
   enabled: true

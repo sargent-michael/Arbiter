@@ -1,18 +1,30 @@
 apiVersion: v2
 name: arbiter-stack
-description: Arbiter plus optional kube-prometheus-stack bootstrap.
+description: Arbiter with minimal Prometheus, Grafana, and Loki stack.
 type: application
-version: 0.1.7
-appVersion: "1.0.4"
+version: 0.1.12
+appVersion: "1.0.8"
 dependencies:
   - name: arbiter
-    version: 0.1.7
+    version: 0.1.12
     repository: "https://sargent-michael.github.io/Arbiter"
   - name: cert-manager
     version: 1.15.3
     repository: https://charts.jetstack.io
     condition: cert-manager.enabled
-  - name: kube-prometheus-stack
-    version: 61.3.1
+  - name: prometheus
+    version: 25.27.0
     repository: https://prometheus-community.github.io/helm-charts
-    condition: kube-prometheus-stack.enabled
+    condition: prometheus.enabled
+  - name: grafana
+    version: 8.5.2
+    repository: https://grafana.github.io/helm-charts
+    condition: grafana.enabled
+  - name: loki
+    version: 6.16.0
+    repository: https://grafana.github.io/helm-charts
+    condition: loki.enabled
+  - name: promtail
+    version: 6.16.0
+    repository: https://grafana.github.io/helm-charts
+    condition: promtail.enabled

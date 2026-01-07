@@ -21,6 +21,9 @@ spec:
     - jsonPath: .status.namespacesSummary
       name: Namespaces
       type: string
+    - jsonPath: .spec.enforcementMode
+      name: Enforcement
+      type: string
     - jsonPath: .status.capabilitiesSummary
       name: Capabilities
       type: string
@@ -376,9 +379,8 @@ spec:
                 items:
                   type: string
                 type: array
-              enforcementConfirmation:
-                description: enforcementConfirmation confirms whether policies were
-                  enforced or skipped.
+              enforcementStatus:
+                description: enforcementStatus reflects the current enforcement mode.
                 type: string
               externalIntegrations:
                 description: externalIntegrations summarizes external integrations.
