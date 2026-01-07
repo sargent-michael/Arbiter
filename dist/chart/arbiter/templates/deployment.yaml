@@ -23,6 +23,22 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       serviceAccountName: {{ include "arbiter.serviceAccountName" . }}
+      {{- if .Values.webhook.enabled }}
+      initContainers:
+      - name: wait-webhook-cert
+        image: busybox:1.36
+        command:
+        - /bin/sh
+        - -c
+        args:
+        - >-
+          until [ -f /tmp/k8s-webhook-server/serving-certs/tls.crt ];
+          do echo "waiting for webhook cert"; sleep 2; done
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: webhook-cert
+          readOnly: true
+      {{- end }}
       containers:
       - name: manager
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -76,4 +92,5 @@ spec:
       - name: webhook-cert
         secret:
           secretName: {{ .Values.webhook.certSecretName }}
+          optional: true
       {{- end }}
