@@ -15,7 +15,7 @@ resources:
   controller: true
   domain: io
   group: project-arbiter
-  kind: Settler
+  kind: Occupant
   path: github.com/sargent-michael/Arbiter/api/v1alpha1
   version: v1alpha1
 version: "3"

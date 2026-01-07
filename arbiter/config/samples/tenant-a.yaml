@@ -1,12 +1,12 @@
-# config/samples/arbiter_v1alpha1_settler.yaml (or a new file)
+# config/samples/arbiter_v1alpha1_occupant.yaml (or a new file)
 apiVersion: project-arbiter.io/v1alpha1
-kind: Settler
+kind: Occupant
 metadata:
   name: hawkins
 spec:
-  settlerID: "hawkins"
-  # targetNamespace: "settler-hawkins"  # optional; default is settler-<settlerID>
-  # targetNamespaces:              # optional; defaults to ["settler-<settlerID>"]
+  occupantID: "hawkins"
+  # targetNamespace: "occupant-hawkins"  # optional; default is occupant-<occupantID>
+  # targetNamespaces:              # optional; defaults to ["occupant-<occupantID>"]
   #   - hawkins-lab
   #   - hawkins-ops
   baselinePolicy:

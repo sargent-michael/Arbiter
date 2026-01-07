@@ -1,9 +1,9 @@
 apiVersion: project-arbiter.io/v1alpha1
-kind: Settler
+kind: Occupant
 metadata:
   name: starcourt
 spec:
-  settlerID: starcourt
+  occupantID: starcourt
 
   # Defaults apply (namespace name, baseline controls)
   adminSubjects:

@@ -3,7 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/project-arbiter.io_baselines.yaml
-- bases/project-arbiter.io_settlers.yaml
+- bases/project-arbiter.io_occupants.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:

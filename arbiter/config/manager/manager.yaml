@@ -51,7 +51,7 @@ spec:
       #             values:
       #               - linux
       securityContext:
-        # Settlers are configured by default to adhere to the "restricted" Pod Security Standards.
+        # Occupants are configured by default to adhere to the "restricted" Pod Security Standards.
         # This ensures that deployments meet the highest security requirements for Kubernetes.
         # For more details, see: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
         runAsNonRoot: true
@@ -84,7 +84,7 @@ spec:
             port: 8081
           initialDelaySeconds: 5
           periodSeconds: 10
-        # TODO(user): Configure the resources accordingly based on the settler requirements.
+        # TODO(user): Configure the resources accordingly based on the occupant requirements.
         # More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
         resources:
           limits:

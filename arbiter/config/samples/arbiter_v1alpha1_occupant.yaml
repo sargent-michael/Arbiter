@@ -1,0 +1,12 @@
+apiVersion: project-arbiter.io/v1alpha1
+kind: Occupant
+metadata:
+  name: starcourt
+spec:
+  occupantID: starcourt
+  # targetNamespace: occupant-starcourt   # optional; defaults to occupant-<occupantID>
+  # targetNamespaces:             # optional; defaults to ["occupant-<occupantID>"]
+  #   - starcourt-mall
+  #   - starcourt-ops
+  # adminSubjects: []             # optional
+  # baselinePolicy: {}           # optional

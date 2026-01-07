@@ -9,17 +9,18 @@
 -----------------------------------------
 ```
 
-Arbiter is a Kubernetes operator that turns settler onboarding into a single, repeatable declaration.
-You define a `Settler`, and Arbiter enforces namespaces, RBAC, quotas, limits, and network policy
+Arbiter is a Kubernetes operator that turns occupant onboarding into a single, repeatable declaration.
+You define an `Occupant`, and Arbiter enforces namespaces, RBAC, quotas, limits, and network policy
 with continuous reconciliation.
 
 ---
 
 ## Highlights
 
-- Multi-namespace settlers with deterministic naming (`settler-<settlerID>` by default)
-- Global Baseline with per-settler overrides for quotas, limits, and network policy
-- Status summaries in `kubectl get sett` for fast validation
+- Multi-namespace occupants with deterministic naming (`occupant-<occupantID>` by default)
+- Global Baseline with per-occupant overrides for quotas, limits, and network policy
+- Status summaries in `kubectl get occupants` for fast validation
+- Managed namespaces can be `Enforcing` or `Permissive`
 - Helm stack installs cert-manager, Prometheus, Grafana, and Arbiter together
 - Metrics and dashboards included out of the box
 
@@ -38,8 +39,8 @@ helm repo update
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.3 \
-  --version 0.1.6 \
+  --set arbiter.image.tag=1.0.4 \
+  --version 0.1.7 \
   --set kube-prometheus-stack.enabled=true
 kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 ```
@@ -65,8 +66,8 @@ helm repo update
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.3 \
-  --version 0.1.6
+  --set arbiter.image.tag=1.0.4 \
+  --version 0.1.7
 
 kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 ```
@@ -83,29 +84,36 @@ If the CRDs already exist (from a previous install), use `--skip-crds`:
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.3 \
-  --version 0.1.6 \
+  --set arbiter.image.tag=1.0.4 \
+  --version 0.1.7 \
   --skip-crds
 ```
 
 ---
 
-## Settler CRD
+## Occupant CRD
 
 ```yaml
 apiVersion: project-arbiter.io/v1alpha1
-kind: Settler
+kind: Occupant
 metadata:
   name: hawkins
 spec:
-  settlerID: "hawkins"
-  # targetNamespace: settler-hawkins
+  occupantID: "hawkins"
+  # targetNamespace: occupant-hawkins
   # targetNamespaces:
   #   - hawkins-lab
   #   - hawkins-ops
+  # adoptedNamespaces:
+  #   - hawkins-legacy
+  # enforcementMode: Permissive
+  # capabilities: ["rbac", "net", "obs", "ci"]
   adminSubjects:
     - kind: Group
       name: hellfire-club
+  externalIntegrations:
+    ci: github-actions
+    observability: grafana
   baselinePolicy:
     networkIsolation: true
     resourceQuota: true
@@ -128,10 +136,14 @@ spec:
 
 ### Key Fields
 
-- `spec.settlerID`: Stable settler identifier (required)
+- `spec.occupantID`: Stable occupant identifier (required)
 - `spec.targetNamespace`: Explicit namespace override (optional)
-- `spec.targetNamespaces`: List of namespaces managed for the settler (optional)
+- `spec.targetNamespaces`: List of namespaces managed for the occupant (optional)
+- `spec.adoptedNamespaces`: Existing namespaces to adopt without deletion lifecycle (optional)
 - `spec.adminSubjects`: RBAC subjects granted admin access
+- `spec.enforcementMode`: `Enforcing` or `Permissive` policy enforcement (optional)
+- `spec.capabilities`: Declared capability labels for status summaries (optional)
+- `spec.externalIntegrations`: CI/observability/cost integration labels (optional)
 - `spec.baselinePolicy`: Toggle and override baseline enforcement
 
 ---
@@ -155,9 +167,9 @@ spec:
 
 ## Samples (Stranger Things)
 
-- `samples/sample1.yaml`: simple Settler with defaults (Starcourt)
+- `samples/sample1.yaml`: simple Occupant with defaults (Starcourt)
 - `samples/sample2.yaml`: overrides + extra RoleBindings (Upside Down)
-- `samples/sample3.yaml`: multi-namespace settler (Hawkins R&D)
+- `samples/sample3.yaml`: multi-namespace occupant (Hawkins R&D)
 - `samples/sample4.yaml`: multi-namespace + multiple ingress ports
 
 ---
@@ -181,11 +193,29 @@ kubectl port-forward -n arbiter-system svc/arbiter-stack-grafana 3000:80
 ## CLI Shortcuts
 
 ```bash
-kubectl get settlers
-kubectl get sett
-kubectl get sett <settler>
-kubectl delete sett <settler>
+kubectl get occupants
+kubectl get occ
+kubectl get project
+kubectl get project <occupant>
+kubectl delete occ <occupant>
 ```
+
+Example `kubectl get occupants` output:
+
+```
+NAME          NAMESPACES        CAPABILITIES        HEALTH   DRIFT
+hellfire      3 (managed)       rbac,net,obs,ci     OK       0
+starcourt     1 (adopted)       rbac,obs            WARN     2
+```
+
+`kubectl describe project <project-id>` now includes:
+
+- Identity bindings (groups/users)
+- Enabled capabilities
+- Enforcement confirmation
+- Drift summary
+- External integrations (CI, observability, cost)
+- Last reconciliation outcome
 
 Arbiter logs via kubectl plugin:
 

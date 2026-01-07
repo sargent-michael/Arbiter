@@ -190,16 +190,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := (&controller.SettlerReconciler{
+	if err := (&controller.OccupantReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Settler")
+		setupLog.Error(err, "unable to create controller", "controller", "Occupant")
 		os.Exit(1)
 	}
 
-	if err := (&platformv1alpha1.Settler{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "Settler")
+	if err := (&platformv1alpha1.Occupant{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "Occupant")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

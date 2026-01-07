@@ -30,7 +30,7 @@ import (
 	platformv1alpha1 "github.com/sargent-michael/Kubernetes-Operator/api/v1alpha1"
 )
 
-var _ = Describe("Settler Controller", func() {
+var _ = Describe("Occupant Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
@@ -40,19 +40,19 @@ var _ = Describe("Settler Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		settler := &platformv1alpha1.Settler{}
+		occupant := &platformv1alpha1.Occupant{}
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind Settler")
-			err := k8sClient.Get(ctx, typeNamespacedName, settler)
+			By("creating the custom resource for the Kind Occupant")
+			err := k8sClient.Get(ctx, typeNamespacedName, occupant)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &platformv1alpha1.Settler{
+				resource := &platformv1alpha1.Occupant{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					Spec: platformv1alpha1.SettlerSpec{
-						SettlerID: "test-settler",
+					Spec: platformv1alpha1.OccupantSpec{
+						OccupantID: "test-occupant",
 					},
 					// TODO(user): Specify other spec details if needed.
 				}
@@ -62,16 +62,16 @@ var _ = Describe("Settler Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &platformv1alpha1.Settler{}
+			resource := &platformv1alpha1.Occupant{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Cleanup the specific resource instance Settler")
+			By("Cleanup the specific resource instance Occupant")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
-			controllerReconciler := &SettlerReconciler{
+			controllerReconciler := &OccupantReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}

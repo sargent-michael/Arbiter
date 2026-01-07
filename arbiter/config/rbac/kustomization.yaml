@@ -22,7 +22,7 @@ resources:
 # For each CRD, "Admin", "Editor" and "Viewer" roles are scaffolded by
 # default, aiding admins in cluster management. Those roles are
 # not used by the arbiter itself. You can comment the following lines
-# if you do not want those helpers be installed with your Settler.
+# if you do not want those helpers be installed with your Occupant.
 - project_admin_role.yaml
 - project_editor_role.yaml
 - project_viewer_role.yaml

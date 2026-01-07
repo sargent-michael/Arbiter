@@ -10,9 +10,9 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-project-arbiter-io-v1alpha1-settler
+      path: /mutate-project-arbiter-io-v1alpha1-occupant
   failurePolicy: Ignore
-  name: msettler.project-arbiter.io
+  name: moccupant.project-arbiter.io
   rules:
   - apiGroups:
     - project-arbiter.io
@@ -22,5 +22,5 @@ webhooks:
     - CREATE
     - UPDATE
     resources:
-    - settlers
+    - occupants
   sideEffects: None

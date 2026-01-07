@@ -1,14 +1,16 @@
 apiVersion: project-arbiter.io/v1alpha1
-kind: Settler
+kind: Occupant
 metadata:
   name: upside-down
 spec:
-  settlerID: upsidedown
+  occupantID: upsidedown
 
   # Explicit namespace names (clean + thematic)
   targetNamespaces:
     - hawkins-lab
     - hawkins-ops
+  # adoptedNamespaces:
+  #   - starcourt-legacy
 
   # Full control — “those who cross the gate”
   adminSubjects:
@@ -53,7 +55,7 @@ metadata:
   name: gate-operators
   namespace: hawkins-lab
   labels:
-    project-arbiter.io/settler: upsidedown
+    project-arbiter.io/occupant: upsidedown
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -69,7 +71,7 @@ metadata:
   name: signal-observers
   namespace: hawkins-lab
   labels:
-    project-arbiter.io/settler: upsidedown
+    project-arbiter.io/occupant: upsidedown
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

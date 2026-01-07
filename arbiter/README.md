@@ -1,13 +1,14 @@
 # Arbiter Operator
 
-Arbiter is a control plane operator for settlers and namespaces. It watches `Settler`
-resources and enforces a strict, repeatable baseline so every settler starts clean
+Arbiter is a control plane operator for occupants and namespaces. It watches `Occupant`
+resources and enforces a strict, repeatable baseline so every occupant starts clean
 and stays compliant.
 
 ## What It Reconciles
 
 - Namespace creation + labeling
-- Admin RBAC RoleBinding inside settler namespaces
+- Admin RBAC RoleBinding inside occupant namespaces
+- Enforcement mode (Permissive or Enforcing) for managed namespaces
 - ResourceQuota defaults
 - LimitRange defaults
 - NetworkPolicy defaults:
@@ -17,7 +18,7 @@ and stays compliant.
 
 ## Overrides
 
-Per-settler overrides can be set in `spec.baselinePolicy`:
+Per-occupant overrides can be set in `spec.baselinePolicy`:
 
 - `resourceQuotaSpec` to replace the default ResourceQuota
 - `limitRangeSpec` to replace the default LimitRange

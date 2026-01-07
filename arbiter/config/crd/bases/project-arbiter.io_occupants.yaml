@@ -4,35 +4,33 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.19.0
-  name: settlers.project-arbiter.io
+  name: occupants.project-arbiter.io
 spec:
   group: project-arbiter.io
   names:
-    kind: Settler
-    listKind: SettlerList
-    plural: settlers
+    kind: Occupant
+    listKind: OccupantList
+    plural: occupants
     shortNames:
-    - sett
-    singular: settler
+    - occ
+    - project
+    singular: occupant
   scope: Cluster
   versions:
-  - name: v1alpha1
-    additionalPrinterColumns:
-    - jsonPath: .status.namespaces
+  - additionalPrinterColumns:
+    - jsonPath: .status.namespacesSummary
       name: Namespaces
       type: string
-    - jsonPath: .status.resourceQuotaSummary
-      name: Quota
+    - jsonPath: .status.capabilitiesSummary
+      name: Capabilities
       type: string
-    - jsonPath: .status.limitRangeSummary
-      name: Limits
+    - jsonPath: .status.health
+      name: Health
       type: string
-    - jsonPath: .status.networkPolicySummary
-      name: Network
+    - jsonPath: .status.driftSummary
+      name: Drift
       type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         properties:
@@ -54,7 +52,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: SettlerSpec defines the desired state of Settler
+            description: OccupantSpec defines the desired state of Occupant
             properties:
               adminSubjects:
                 description: |-
@@ -80,6 +78,12 @@ spec:
                   - kind
                   - name
                   type: object
+                type: array
+              adoptedNamespaces:
+                description: adoptedNamespaces are existing namespaces Arbiter should
+                  adopt without owning deletion lifecycle.
+                items:
+                  type: string
                 type: array
               baselinePolicy:
                 description: baselinePolicy enables default quota/limits/network policy.
@@ -247,48 +251,61 @@ spec:
                         x-kubernetes-list-type: atomic
                     type: object
                 type: object
-              targetNamespace:
-                description: targetNamespace is the namespace name to create/manage.
-                  If empty, defaults to "settler-<settlerID>".
-                maxLength: 63
-                pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                type: string
-              targetNamespaces:
-                description: targetNamespaces is a list of namespaces to create/manage
-                  for this settler. If empty, defaults to ["settler-<settlerID>"].
+              capabilities:
+                description: capabilities lists declared capabilities to expose in
+                  status summaries.
                 items:
-                  maxLength: 63
-                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                   type: string
                 type: array
-                x-kubernetes-list-type: atomic
-              settlerID:
-                description: settlerID is the stable identifier for the settler (used
-                  for labels, naming, etc.)
+              enforcementMode:
+                description: enforcementMode controls whether Arbiter enforces baseline
+                  policies on managed namespaces.
+                enum:
+                - Enforcing
+                - Permissive
+                type: string
+              externalIntegrations:
+                description: externalIntegrations describe optional integrations for
+                  this occupant.
+                properties:
+                  ci:
+                    description: ci integration provider or label.
+                    type: string
+                  cost:
+                    description: cost integration provider or label.
+                    type: string
+                  observability:
+                    description: observability integration provider or label.
+                    type: string
+                type: object
+              occupantID:
+                description: occupantID is the stable identifier for the occupant
+                  (used for labels, naming, etc.)
                 maxLength: 63
                 minLength: 2
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                 type: string
-            required:
-            - settectID
-            type: object
-          status:
-            description: SettlerStatus defines the observed state of Settler.
-            properties:
-              limitRangeSummary:
-                description: limitRangeSummary is a human-friendly summary of enforced limits.
+              targetNamespace:
+                description: targetNamespace is the namespace name to create/manage.
+                  If empty, defaults to "occupant-<occupantID>".
+                maxLength: 63
+                pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                 type: string
-              namespaces:
-                description: namespaces managed for this settler.
+              targetNamespaces:
+                description: |-
+                  targetNamespaces is a list of namespaces to create/manage for this tenant.
+                  If empty, defaults to ["occupant-<occupantID>"].
                 items:
                   type: string
                 type: array
-                x-kubernetes-list-type: atomic
-              networkPolicySummary:
-                description: networkPolicySummary is a human-friendly summary of enforced network policy.
-                type: string
-              resourceQuotaSummary:
-                description: resourceQuotaSummary is a human-friendly summary of enforced quota.
+            required:
+            - occupantID
+            type: object
+          status:
+            description: OccupantStatus defines the observed state of Occupant.
+            properties:
+              capabilitiesSummary:
+                description: capabilitiesSummary is a human-friendly summary of capabilities.
                 type: string
               conditions:
                 items:
@@ -346,6 +363,61 @@ spec:
                   - type
                   type: object
                 type: array
+              driftCount:
+                description: driftCount is the number of drift corrections detected
+                  in the last reconcile.
+                format: int32
+                type: integer
+              driftSummary:
+                description: driftSummary is a human-friendly drift summary.
+                type: string
+              enabledCapabilities:
+                description: enabledCapabilities is the computed list of enabled capabilities.
+                items:
+                  type: string
+                type: array
+              enforcementConfirmation:
+                description: enforcementConfirmation confirms whether policies were
+                  enforced or skipped.
+                type: string
+              externalIntegrations:
+                description: externalIntegrations summarizes external integrations.
+                type: string
+              health:
+                description: health is a coarse health summary (OK/WARN/ERROR).
+                type: string
+              identityBindings:
+                description: identityBindings is a human-friendly summary of admin
+                  subjects.
+                type: string
+              lastReconciliationOutcome:
+                description: lastReconciliationOutcome is the last reconcile outcome.
+                type: string
+              lastReconciliationTime:
+                description: lastReconciliationTime is the time of the last reconcile.
+                format: date-time
+                type: string
+              limitRangeSummary:
+                description: limitRangeSummary is a human-friendly summary of enforced
+                  limits.
+                type: string
+              namespaces:
+                description: namespaces managed for this occupant.
+                items:
+                  type: string
+                type: array
+              namespacesSummary:
+                description: namespacesSummary is a summary of managed/adopted namespace
+                  counts.
+                type: string
+              networkPolicySummary:
+                description: networkPolicySummary is a human-friendly summary of enforced
+                  network policy.
+                type: string
+              resourceQuotaSummary:
+                description: resourceQuotaSummary is a human-friendly summary of enforced
+                  quota.
+                type: string
             type: object
         required:
         - spec

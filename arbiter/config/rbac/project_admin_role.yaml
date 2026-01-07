@@ -1,4 +1,4 @@
-# This rule is not used by the settler arbiter itself.
+# This rule is not used by the occupant arbiter itself.
 # It is provided to allow the cluster admin to help manage permissions for users.
 #
 # Grants full permissions ('*') over project-arbiter.io.
@@ -11,17 +11,17 @@ metadata:
   labels:
     app.kubernetes.io/name: arbiter
     app.kubernetes.io/managed-by: kustomize
-  name: settler-admin-role
+  name: occupant-admin-role
 rules:
 - apiGroups:
   - project-arbiter.io
   resources:
-  - settlers
+  - occupants
   verbs:
   - '*'
 - apiGroups:
   - project-arbiter.io
   resources:
-  - settlers/status
+  - occupants/status
   verbs:
   - get

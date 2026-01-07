@@ -1,15 +1,16 @@
 apiVersion: project-arbiter.io/v1alpha1
-kind: Settler
+kind: Occupant
 metadata:
   name: mind-flayer
 spec:
-  settlerID: mind-flayer
+  occupantID: mind-flayer
 
-  # Multiple namespaces managed by a single settler.
+  # Multiple namespaces managed by a single occupant.
   targetNamespaces:
     - creel-house
     - surfer-boy
     - byers-house
+  # enforcementMode: Permissive
 
   adminSubjects:
     - kind: Group

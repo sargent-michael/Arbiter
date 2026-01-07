@@ -1,11 +1,11 @@
 apiVersion: project-arbiter.io/v1alpha1
-kind: Settler
+kind: Occupant
 metadata:
   name: hawkins-rd
 spec:
-  settlerID: hawkins-rd
+  occupantID: hawkins-rd
 
-  # Multiple namespaces managed by a single settler.
+  # Multiple namespaces managed by a single occupant.
   targetNamespaces:
     - hawkins-rd
     - starcourt-mall
@@ -17,7 +17,7 @@ spec:
     - kind: User
       name: hopper@hawkins.local
 
-  # Per-settler overrides on top of the Baseline defaults.
+  # Per-occupant overrides on top of the Baseline defaults.
   baselinePolicy:
     allowedIngressPorts:
       - 443

@@ -6,7 +6,7 @@ metadata:
   annotations:
     cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ .Values.webhook.certSecretName }}
 webhooks:
-- name: msettler.project-arbiter.io
+- name: moccupant.project-arbiter.io
   admissionReviewVersions:
   - v1
   sideEffects: None
@@ -15,7 +15,7 @@ webhooks:
     service:
       name: {{ include "arbiter.fullname" . }}-webhook-service
       namespace: {{ .Release.Namespace }}
-      path: /mutate-project-arbiter-io-v1alpha1-settler
+      path: /mutate-project-arbiter-io-v1alpha1-occupant
   rules:
   - apiGroups:
     - project-arbiter.io
@@ -25,6 +25,6 @@ webhooks:
     - CREATE
     - UPDATE
     resources:
-    - settlers
+    - occupants
     scope: "*"
 {{- end -}}
