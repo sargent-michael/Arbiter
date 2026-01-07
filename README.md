@@ -41,7 +41,7 @@ helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
   --set arbiter.image.tag=1.0.8 \
-  --version 0.1.13
+  --version 0.1.14
 kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 ```
 
@@ -67,7 +67,7 @@ helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
   --set arbiter.image.tag=1.0.8 \
-  --version 0.1.13
+  --version 0.1.14
 
 kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 ```
@@ -85,7 +85,7 @@ helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
   --set arbiter.image.tag=1.0.8 \
-  --version 0.1.13 \
+  --version 0.1.14 \
   --skip-crds
 ```
 
