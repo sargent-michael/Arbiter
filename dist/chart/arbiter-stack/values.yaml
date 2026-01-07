@@ -30,7 +30,7 @@ prometheus:
           bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
           static_configs:
             - targets:
-                - arbiter-stack-arbiter-controller-manager-metrics-service.arbiter-system.svc:8443
+                - arbiter-stack-controller-manager-metrics-service.arbiter-system.svc:8443
 
 grafana:
   enabled: true
