@@ -1,0 +1,39 @@
+apiVersion: project-arbiter.io/v1alpha1
+kind: Occupant
+metadata:
+  name: hellfire-all-capabilities
+spec:
+  occupantID: hellfire-all-capabilities
+  enforcementMode: Permissive
+
+  targetNamespaces:
+    - hellfire-staging
+    - hellfire-lab
+  adoptedNamespaces:
+    - hellfire-legacy
+
+  capabilities:
+    - rbac
+    - net
+    - obs
+    - ci
+    - cost
+
+  adminSubjects:
+    - kind: Group
+      name: hellfire-club
+    - kind: User
+      name: eddie@hawkins.local
+
+  externalIntegrations:
+    ci: github-actions
+    observability: grafana
+    cost: kubecost
+
+  baselinePolicy:
+    networkIsolation: true
+    resourceQuota: true
+    limitRange: true
+    allowedIngressPorts:
+      - 443
+      - 8443
