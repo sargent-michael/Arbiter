@@ -30,9 +30,9 @@ spec:
     - jsonPath: .status.health
       name: Health
       type: string
-    - jsonPath: .status.driftSummary
-      name: Drift
-      type: string
+    - jsonPath: .status.reconcileCount
+      name: Reconciles
+      type: integer
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -418,6 +418,10 @@ spec:
                 description: networkPolicySummary is a human-friendly summary of enforced
                   network policy.
                 type: string
+              reconcileCount:
+                description: reconcileCount is the total number of successful reconciliations.
+                format: int64
+                type: integer
               resourceQuotaSummary:
                 description: resourceQuotaSummary is a human-friendly summary of enforced
                   quota.

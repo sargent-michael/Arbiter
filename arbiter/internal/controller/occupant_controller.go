@@ -282,6 +282,7 @@ func (r *OccupantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 	occ.Status.ExternalIntegrations = summarizeExternalIntegrations(occ.Spec.ExternalIntegrations)
 	occ.Status.DriftCount = driftCount
 	occ.Status.DriftSummary = fmt.Sprintf("%d", driftCount)
+	occ.Status.ReconcileCount = occ.Status.ReconcileCount + 1
 	if driftCount > 0 {
 		occ.Status.Health = "WARN"
 	} else {
@@ -431,8 +432,15 @@ func (r *OccupantReconciler) reconcileNamespace(
 		}
 		drift += int32(networkDrift)
 	}
+	if !adopted {
+		legacyDrift, err := r.cleanupLegacyBaselineResources(ctx, nsName)
+		if err != nil {
+			return drift, err
+		}
+		drift += legacyDrift
+	}
 	if enforcementMode == "Permissive" && !adopted {
-		cleanupDrift, err := r.cleanupBaselineResources(ctx, nsName)
+		cleanupDrift, err := r.cleanupBaselineResources(ctx, occ.Spec.OccupantID, nsName)
 		if err != nil {
 			return drift, err
 		}
@@ -604,7 +612,7 @@ func (r *OccupantReconciler) deleteLegacyRoleBinding(ctx context.Context, name, 
 }
 
 func (r *OccupantReconciler) ensureResourceQuota(ctx context.Context, occ *platformv1alpha1.Occupant, ns string, policy platformv1alpha1.BaselinePolicy) (bool, error) {
-	name := "tenant-quota"
+	name := occupantResourceName(occ.Spec.OccupantID, "quota")
 	desiredSpec := defaultResourceQuotaSpec()
 	if policy.ResourceQuotaSpec != nil {
 		desiredSpec = *policy.ResourceQuotaSpec
@@ -633,7 +641,7 @@ func (r *OccupantReconciler) ensureResourceQuota(ctx context.Context, occ *platf
 }
 
 func (r *OccupantReconciler) ensureLimitRange(ctx context.Context, occ *platformv1alpha1.Occupant, ns string, policy platformv1alpha1.BaselinePolicy) (bool, error) {
-	name := "tenant-limits"
+	name := occupantResourceName(occ.Spec.OccupantID, "limits")
 	desiredSpec := defaultLimitRangeSpec()
 	if policy.LimitRangeSpec != nil {
 		desiredSpec = *policy.LimitRangeSpec
@@ -666,6 +674,9 @@ func (r *OccupantReconciler) ensureNetworkPolicies(ctx context.Context, occ *pla
 	if len(allowedIngressPorts) == 0 {
 		allowedIngressPorts = []int32{443}
 	}
+	denyName := occupantResourceName(occ.Spec.OccupantID, "default-deny-all")
+	allowHTTPSName := occupantResourceName(occ.Spec.OccupantID, "allow-https-ingress")
+	allowDNSName := occupantResourceName(occ.Spec.OccupantID, "allow-dns-egress")
 	ingressPorts := make([]netv1.NetworkPolicyPort, 0, len(allowedIngressPorts))
 	for _, port := range allowedIngressPorts {
 		ingressPorts = append(ingressPorts, netv1.NetworkPolicyPort{
@@ -676,7 +687,7 @@ func (r *OccupantReconciler) ensureNetworkPolicies(ctx context.Context, occ *pla
 
 	// Default deny all ingress + egress
 	deny := &netv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{Name: "default-deny-all", Namespace: ns},
+		ObjectMeta: metav1.ObjectMeta{Name: denyName, Namespace: ns},
 		Spec: netv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{},
 			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeIngress, netv1.PolicyTypeEgress},
@@ -693,7 +704,7 @@ func (r *OccupantReconciler) ensureNetworkPolicies(ctx context.Context, occ *pla
 
 	// Allow ingress from anywhere on allowed TCP ports
 	allowHTTPSIngress := &netv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{Name: "allow-https-ingress", Namespace: ns},
+		ObjectMeta: metav1.ObjectMeta{Name: allowHTTPSName, Namespace: ns},
 		Spec: netv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{},
 			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeIngress},
@@ -714,7 +725,7 @@ func (r *OccupantReconciler) ensureNetworkPolicies(ctx context.Context, occ *pla
 
 	// Allow DNS egress to kube-dns in kube-system
 	allowDNS := &netv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{Name: "allow-dns-egress", Namespace: ns},
+		ObjectMeta: metav1.ObjectMeta{Name: allowDNSName, Namespace: ns},
 		Spec: netv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{},
 			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeEgress},
@@ -796,20 +807,23 @@ func (r *OccupantReconciler) ensureNetworkPolicy(ctx context.Context, owner clie
 	return true, r.Update(ctx, &current)
 }
 
-func (r *OccupantReconciler) cleanupBaselineResources(ctx context.Context, ns string) (int32, error) {
+func (r *OccupantReconciler) cleanupBaselineResources(ctx context.Context, occupantID, ns string) (int32, error) {
 	var drift int32
-	if deleted, err := r.deleteResourceQuota(ctx, "tenant-quota", ns); err != nil {
-		return drift, err
-	} else if deleted {
-		drift++
+	for _, name := range baselineResourceQuotaNames(occupantID) {
+		if deleted, err := r.deleteResourceQuota(ctx, name, ns); err != nil {
+			return drift, err
+		} else if deleted {
+			drift++
+		}
 	}
-	if deleted, err := r.deleteLimitRange(ctx, "tenant-limits", ns); err != nil {
-		return drift, err
-	} else if deleted {
-		drift++
+	for _, name := range baselineLimitRangeNames(occupantID) {
+		if deleted, err := r.deleteLimitRange(ctx, name, ns); err != nil {
+			return drift, err
+		} else if deleted {
+			drift++
+		}
 	}
-	networkNames := []string{"default-deny-all", "allow-https-ingress", "allow-dns-egress"}
-	for _, name := range networkNames {
+	for _, name := range baselineNetworkPolicyNames(occupantID) {
 		if deleted, err := r.deleteNetworkPolicy(ctx, name, ns); err != nil {
 			return drift, err
 		} else if deleted {
@@ -817,6 +831,81 @@ func (r *OccupantReconciler) cleanupBaselineResources(ctx context.Context, ns st
 		}
 	}
 	return drift, nil
+}
+
+func (r *OccupantReconciler) cleanupLegacyBaselineResources(ctx context.Context, ns string) (int32, error) {
+	var drift int32
+	for _, name := range legacyBaselineResourceQuotaNames() {
+		if deleted, err := r.deleteResourceQuota(ctx, name, ns); err != nil {
+			return drift, err
+		} else if deleted {
+			drift++
+		}
+	}
+	for _, name := range legacyBaselineLimitRangeNames() {
+		if deleted, err := r.deleteLimitRange(ctx, name, ns); err != nil {
+			return drift, err
+		} else if deleted {
+			drift++
+		}
+	}
+	for _, name := range legacyBaselineNetworkPolicyNames() {
+		if deleted, err := r.deleteNetworkPolicy(ctx, name, ns); err != nil {
+			return drift, err
+		} else if deleted {
+			drift++
+		}
+	}
+	return drift, nil
+}
+
+func baselineResourceQuotaNames(occupantID string) []string {
+	return []string{
+		occupantResourceName(occupantID, "quota"),
+	}
+}
+
+func baselineLimitRangeNames(occupantID string) []string {
+	return []string{
+		occupantResourceName(occupantID, "limits"),
+	}
+}
+
+func baselineNetworkPolicyNames(occupantID string) []string {
+	return []string{
+		occupantResourceName(occupantID, "default-deny-all"),
+		occupantResourceName(occupantID, "allow-https-ingress"),
+		occupantResourceName(occupantID, "allow-dns-egress"),
+	}
+}
+
+func legacyBaselineResourceQuotaNames() []string {
+	return []string{"tenant-quota"}
+}
+
+func legacyBaselineLimitRangeNames() []string {
+	return []string{"tenant-limits"}
+}
+
+func legacyBaselineNetworkPolicyNames() []string {
+	return []string{"default-deny-all", "allow-https-ingress", "allow-dns-egress"}
+}
+
+func occupantResourceName(occupantID, suffix string) string {
+	if occupantID == "" {
+		return suffix
+	}
+	maxIDLen := 63 - len(suffix) - 1
+	if maxIDLen < 1 {
+		return suffix
+	}
+	if len(occupantID) > maxIDLen {
+		occupantID = strings.TrimRight(occupantID[:maxIDLen], "-")
+		if occupantID == "" {
+			return suffix
+		}
+	}
+	return fmt.Sprintf("%s-%s", occupantID, suffix)
 }
 
 func (r *OccupantReconciler) deleteResourceQuota(ctx context.Context, name, ns string) (bool, error) {

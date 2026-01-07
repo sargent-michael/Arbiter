@@ -40,8 +40,8 @@ helm repo update
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.9 \
-  --version 0.1.15
+  --set arbiter.image.tag=1.0.10 \
+  --version 0.1.16
 kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 ```
 
@@ -66,8 +66,8 @@ helm repo update
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.9 \
-  --version 0.1.15
+  --set arbiter.image.tag=1.0.10 \
+  --version 0.1.16
 
 kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 ```
@@ -84,8 +84,8 @@ If the CRDs already exist (from a previous install), use `--skip-crds`:
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.9 \
-  --version 0.1.15 \
+  --set arbiter.image.tag=1.0.10 \
+  --version 0.1.16 \
   --skip-crds
 ```
 
@@ -205,9 +205,9 @@ kubectl delete occ <occupant>
 Example `kubectl get occupants` output:
 
 ```
-NAME          NAMESPACES        ENFORCEMENT   CAPABILITIES        HEALTH   DRIFT
-hellfire      3 (managed)       Enforcing     rbac,net,obs,ci     OK       0
-starcourt     1 (adopted)       Permissive    rbac,obs            WARN     2
+NAME          NAMESPACES        ENFORCEMENT   CAPABILITIES        HEALTH   RECONCILES
+hellfire      3 (managed)       Enforcing     rbac,net,obs,ci     OK       12
+starcourt     1 (adopted)       Permissive    rbac,obs            WARN     4
 ```
 
 `kubectl describe project <project-id>` now includes:

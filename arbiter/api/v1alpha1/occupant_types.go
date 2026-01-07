@@ -157,6 +157,10 @@ type OccupantStatus struct {
 	// +optional
 	DriftSummary string `json:"driftSummary,omitempty"`
 
+	// reconcileCount is the total number of successful reconciliations.
+	// +optional
+	ReconcileCount int64 `json:"reconcileCount,omitempty"`
+
 	// identityBindings is a human-friendly summary of admin subjects.
 	// +optional
 	IdentityBindings string `json:"identityBindings,omitempty"`
@@ -198,7 +202,7 @@ type OccupantStatus struct {
 // +kubebuilder:printcolumn:name="Enforcement",type=string,JSONPath=`.spec.enforcementMode`
 // +kubebuilder:printcolumn:name="Capabilities",type=string,JSONPath=`.status.capabilitiesSummary`
 // +kubebuilder:printcolumn:name="Health",type=string,JSONPath=`.status.health`
-// +kubebuilder:printcolumn:name="Drift",type=string,JSONPath=`.status.driftSummary`
+// +kubebuilder:printcolumn:name="Reconciles",type=integer,JSONPath=`.status.reconcileCount`
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 type Occupant struct {
