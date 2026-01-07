@@ -25,7 +25,7 @@ spec:
       namespace: hawkins-lab
 
   # Hawkins Lab security posture
-  baselinePolicy:
+  occupantPolicy:
     resourceQuota: true
     limitRange: true
     networkIsolation: true

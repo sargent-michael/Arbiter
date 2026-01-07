@@ -40,8 +40,8 @@ helm repo update
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.8 \
-  --version 0.1.14
+  --set arbiter.image.tag=1.0.9 \
+  --version 0.1.15
 kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 ```
 
@@ -66,8 +66,8 @@ helm repo update
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.8 \
-  --version 0.1.14
+  --set arbiter.image.tag=1.0.9 \
+  --version 0.1.15
 
 kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 ```
@@ -84,8 +84,8 @@ If the CRDs already exist (from a previous install), use `--skip-crds`:
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.8 \
-  --version 0.1.14 \
+  --set arbiter.image.tag=1.0.9 \
+  --version 0.1.15 \
   --skip-crds
 ```
 
@@ -114,7 +114,7 @@ spec:
   externalIntegrations:
     ci: github-actions
     observability: grafana
-  baselinePolicy:
+  occupantPolicy:
     networkIsolation: true
     resourceQuota: true
     limitRange: true
@@ -144,7 +144,7 @@ spec:
 - `spec.enforcementMode`: `Enforcing` or `Permissive` policy enforcement (optional)
 - `spec.capabilities`: Declared capability labels for status summaries (optional)
 - `spec.externalIntegrations`: CI/observability/cost integration labels (optional)
-- `spec.baselinePolicy`: Toggle and override baseline enforcement
+- `spec.occupantPolicy`: Toggle and override baseline enforcement (if omitted, Baseline defaults apply)
 
 ---
 

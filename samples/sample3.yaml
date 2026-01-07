@@ -18,7 +18,7 @@ spec:
       name: hopper@hawkins.local
 
   # Per-occupant overrides on top of the Baseline defaults.
-  baselinePolicy:
+  occupantPolicy:
     allowedIngressPorts:
       - 443
       - 8443

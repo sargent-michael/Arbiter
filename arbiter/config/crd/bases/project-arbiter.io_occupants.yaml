@@ -88,8 +88,44 @@ spec:
                 items:
                   type: string
                 type: array
-              baselinePolicy:
-                description: baselinePolicy enables default quota/limits/network policy.
+              capabilities:
+                description: capabilities lists declared capabilities to expose in
+                  status summaries.
+                items:
+                  type: string
+                type: array
+              enforcementMode:
+                description: enforcementMode controls whether Arbiter enforces baseline
+                  policies on managed namespaces.
+                enum:
+                - Enforcing
+                - Permissive
+                type: string
+              externalIntegrations:
+                description: externalIntegrations describe optional integrations for
+                  this occupant.
+                properties:
+                  ci:
+                    description: ci integration provider or label.
+                    type: string
+                  cost:
+                    description: cost integration provider or label.
+                    type: string
+                  observability:
+                    description: observability integration provider or label.
+                    type: string
+                type: object
+              occupantID:
+                description: occupantID is the stable identifier for the occupant
+                  (used for labels, naming, etc.)
+                maxLength: 63
+                minLength: 2
+                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                type: string
+              occupantPolicy:
+                description: |-
+                  occupantPolicy overrides baseline defaults for this occupant.
+                  If omitted, the baseline is applied.
                 properties:
                   allowedIngressPorts:
                     description: |-
@@ -254,40 +290,6 @@ spec:
                         x-kubernetes-list-type: atomic
                     type: object
                 type: object
-              capabilities:
-                description: capabilities lists declared capabilities to expose in
-                  status summaries.
-                items:
-                  type: string
-                type: array
-              enforcementMode:
-                description: enforcementMode controls whether Arbiter enforces baseline
-                  policies on managed namespaces.
-                enum:
-                - Enforcing
-                - Permissive
-                type: string
-              externalIntegrations:
-                description: externalIntegrations describe optional integrations for
-                  this occupant.
-                properties:
-                  ci:
-                    description: ci integration provider or label.
-                    type: string
-                  cost:
-                    description: cost integration provider or label.
-                    type: string
-                  observability:
-                    description: observability integration provider or label.
-                    type: string
-                type: object
-              occupantID:
-                description: occupantID is the stable identifier for the occupant
-                  (used for labels, naming, etc.)
-                maxLength: 63
-                minLength: 2
-                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                type: string
               targetNamespace:
                 description: targetNamespace is the namespace name to create/manage.
                   If empty, defaults to "occupant-<occupantID>".

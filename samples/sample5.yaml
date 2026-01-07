@@ -30,7 +30,7 @@ spec:
     observability: grafana
     cost: kubecost
 
-  baselinePolicy:
+  occupantPolicy:
     networkIsolation: true
     resourceQuota: true
     limitRange: true

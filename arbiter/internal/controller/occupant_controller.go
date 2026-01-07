@@ -220,7 +220,7 @@ func (r *OccupantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 		return ctrl.Result{}, nil
 	}
 
-	policy, err := r.resolveBaselinePolicy(ctx, &occ)
+	policy, err := r.resolveOccupantPolicy(ctx, &occ)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -880,19 +880,24 @@ func (r *OccupantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *OccupantReconciler) resolveBaselinePolicy(ctx context.Context, occ *platformv1alpha1.Occupant) (platformv1alpha1.BaselinePolicy, error) {
-	policy := defaultBaselinePolicy()
+func (r *OccupantReconciler) resolveOccupantPolicy(ctx context.Context, occ *platformv1alpha1.Occupant) (platformv1alpha1.BaselinePolicy, error) {
+	occupantPolicyEmpty := isPolicyEmpty(occ.Spec.OccupantPolicy)
+	policy := platformv1alpha1.BaselinePolicy{}
 
-	baseline, err := r.getBaseline(ctx)
-	if err != nil {
-		return policy, err
-	}
-	if baseline != nil {
-		policy = mergeBaselinePolicy(policy, baseline.Spec.BaselinePolicy)
+	if occupantPolicyEmpty {
+		policy = defaultBaselinePolicy()
+		baseline, err := r.getBaseline(ctx)
+		if err != nil {
+			return policy, err
+		}
+		if baseline != nil {
+			policy = mergeBaselinePolicy(policy, baseline.Spec.BaselinePolicy)
+		}
+	} else {
+		policy = occ.Spec.OccupantPolicy
 	}
 
-	policy = mergeBaselinePolicy(policy, occ.Spec.BaselinePolicy)
-	policy = normalizeBaselinePolicy(policy)
+	policy = normalizeBaselinePolicy(policy, occupantPolicyEmpty)
 	return policy, nil
 }
 
@@ -937,15 +942,24 @@ func mergeBaselinePolicy(base platformv1alpha1.BaselinePolicy, override platform
 	return base
 }
 
-func normalizeBaselinePolicy(policy platformv1alpha1.BaselinePolicy) platformv1alpha1.BaselinePolicy {
-	if policy.NetworkIsolation == nil {
+func normalizeBaselinePolicy(policy platformv1alpha1.BaselinePolicy, defaultEnabled bool) platformv1alpha1.BaselinePolicy {
+	if policy.NetworkIsolation == nil && len(policy.AllowedIngressPorts) > 0 {
 		policy.NetworkIsolation = boolPtr(true)
 	}
-	if policy.ResourceQuota == nil {
+	if policy.ResourceQuota == nil && policy.ResourceQuotaSpec != nil {
 		policy.ResourceQuota = boolPtr(true)
 	}
-	if policy.LimitRange == nil {
+	if policy.LimitRange == nil && policy.LimitRangeSpec != nil {
 		policy.LimitRange = boolPtr(true)
+	}
+	if policy.NetworkIsolation == nil {
+		policy.NetworkIsolation = boolPtr(defaultEnabled)
+	}
+	if policy.ResourceQuota == nil {
+		policy.ResourceQuota = boolPtr(defaultEnabled)
+	}
+	if policy.LimitRange == nil {
+		policy.LimitRange = boolPtr(defaultEnabled)
 	}
 
 	if policy.NetworkIsolation != nil && *policy.NetworkIsolation && len(policy.AllowedIngressPorts) == 0 {
@@ -963,7 +977,16 @@ func normalizeBaselinePolicy(policy platformv1alpha1.BaselinePolicy) platformv1a
 }
 
 func defaultBaselinePolicy() platformv1alpha1.BaselinePolicy {
-	return normalizeBaselinePolicy(platformv1alpha1.BaselinePolicy{})
+	return normalizeBaselinePolicy(platformv1alpha1.BaselinePolicy{}, true)
+}
+
+func isPolicyEmpty(policy platformv1alpha1.BaselinePolicy) bool {
+	return policy.NetworkIsolation == nil &&
+		policy.ResourceQuota == nil &&
+		policy.LimitRange == nil &&
+		policy.ResourceQuotaSpec == nil &&
+		policy.LimitRangeSpec == nil &&
+		len(policy.AllowedIngressPorts) == 0
 }
 
 func collectManagedNamespaces(occ *platformv1alpha1.Occupant) []string {

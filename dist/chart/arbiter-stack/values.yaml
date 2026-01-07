@@ -1,7 +1,7 @@
 arbiter:
   image:
     repository: ghcr.io/sargent-michael/arbiter
-    tag: "1.0.8"
+    tag: "1.0.9"
   metrics:
     enabled: true
     serviceMonitor:

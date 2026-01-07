@@ -18,7 +18,8 @@ and stays compliant.
 
 ## Overrides
 
-Per-occupant overrides can be set in `spec.baselinePolicy`:
+Per-occupant overrides can be set in `spec.occupantPolicy`. If omitted, the
+Baseline defaults are applied:
 
 - `resourceQuotaSpec` to replace the default ResourceQuota
 - `limitRangeSpec` to replace the default LimitRange

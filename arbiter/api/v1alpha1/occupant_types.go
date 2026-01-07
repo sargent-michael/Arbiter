@@ -66,9 +66,10 @@ type OccupantSpec struct {
 	// +optional
 	ExternalIntegrations ExternalIntegrations `json:"externalIntegrations,omitempty"`
 
-	// baselinePolicy enables default quota/limits/network policy.
+	// occupantPolicy overrides baseline defaults for this occupant.
+	// If omitted, the baseline is applied.
 	// +optional
-	BaselinePolicy BaselinePolicy `json:"baselinePolicy,omitempty"`
+	OccupantPolicy BaselinePolicy `json:"occupantPolicy,omitempty"`
 }
 
 type RbacSubject struct {

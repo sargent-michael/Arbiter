@@ -4,6 +4,7 @@ metadata:
   name: mind-flayer
 spec:
   occupantID: mind-flayer
+  enforcementMode: Enforcing
 
   # Multiple namespaces managed by a single occupant.
   targetNamespaces:
@@ -22,7 +23,7 @@ spec:
       namespace: creel-house
 
   # Full-policy override example with multiple ingress ports.
-  baselinePolicy:
+  occupantPolicy:
     resourceQuota: true
     limitRange: true
     networkIsolation: true
