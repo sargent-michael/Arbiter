@@ -1,12 +1,21 @@
 dependencies:
 - name: arbiter
   repository: https://sargent-michael.github.io/Arbiter
-  version: 0.1.1
+  version: 0.1.12
 - name: cert-manager
   repository: https://charts.jetstack.io
   version: v1.15.3
-- name: kube-prometheus-stack
+- name: prometheus
   repository: https://prometheus-community.github.io/helm-charts
-  version: 61.3.1
-digest: sha256:2f1a3b567a14549f116dcbb84931064f272f963255c0a9c4b19c079cf336c17c
-generated: "2026-01-06T15:34:22.630417-05:00"
+  version: 25.27.0
+- name: grafana
+  repository: https://grafana.github.io/helm-charts
+  version: 8.5.2
+- name: loki
+  repository: https://grafana.github.io/helm-charts
+  version: 6.16.0
+- name: promtail
+  repository: https://grafana.github.io/helm-charts
+  version: 6.16.0
+digest: sha256:aaac3796f770c45a87d28506c2ecddb3732e37077aa61b2e40748c71a7cf9bb7
+generated: "2026-01-07T12:00:33.256908-05:00"
