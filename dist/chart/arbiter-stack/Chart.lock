@@ -1,7 +1,7 @@
 dependencies:
 - name: arbiter
   repository: https://sargent-michael.github.io/Arbiter
-  version: 0.1.20
+  version: 0.1.21
 - name: cert-manager
   repository: https://charts.jetstack.io
   version: v1.15.3
@@ -17,5 +17,5 @@ dependencies:
 - name: promtail
   repository: https://grafana.github.io/helm-charts
   version: 6.16.0
-digest: sha256:14cabfeb69bcfab990064236c3001d5d8f96805210d244058b4c43e8433506df
-generated: "2026-01-07T19:55:19.228891-05:00"
+digest: sha256:53cc544779a78c42ed55628b859b744f2e73f3474647d73bf45045db3e1f51fe
+generated: "2026-01-07T20:09:36.936308-05:00"

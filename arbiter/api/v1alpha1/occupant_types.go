@@ -195,7 +195,7 @@ type OccupantStatus struct {
 
 // +kubebuilder:resource:scope=Cluster,shortName=occ;project
 // +kubebuilder:printcolumn:name="Namespaces",type=string,JSONPath=`.status.namespacesSummary`
-// +kubebuilder:printcolumn:name="Enforcement",type=string,JSONPath=`.spec.enforcementMode`
+// +kubebuilder:printcolumn:name="Enforcement",type=string,JSONPath=`.status.enforcementStatus`
 // +kubebuilder:printcolumn:name="Capabilities",type=string,JSONPath=`.status.capabilitiesSummary`
 // +kubebuilder:printcolumn:name="Health",type=string,JSONPath=`.status.health`
 // +kubebuilder:object:root=true
