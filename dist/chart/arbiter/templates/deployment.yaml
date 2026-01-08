@@ -62,6 +62,8 @@ spec:
         {{- end }}
         {{- if .Values.webhook.enabled }}
         - --webhook-cert-path=/tmp/k8s-webhook-server/serving-certs
+        {{- else }}
+        - --webhook-enabled=false
         {{- end }}
         securityContext:
           readOnlyRootFilesystem: true

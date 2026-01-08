@@ -40,8 +40,8 @@ helm repo update
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.12 \
-  --version 0.1.21
+  --set arbiter.image.tag=1.0.13 \
+  --version 0.1.22
 kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 ```
 
@@ -66,8 +66,8 @@ helm repo update
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.12 \
-  --version 0.1.21
+  --set arbiter.image.tag=1.0.13 \
+  --version 0.1.22
 
 kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 ```
@@ -84,8 +84,8 @@ If the CRDs already exist (from a previous install), use `--skip-crds`:
 helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
-  --set arbiter.image.tag=1.0.12 \
-  --version 0.1.21 \
+  --set arbiter.image.tag=1.0.13 \
+  --version 0.1.22 \
   --skip-crds
 ```
 
