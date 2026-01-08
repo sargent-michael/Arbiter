@@ -3,6 +3,16 @@ entries:
   arbiter:
   - apiVersion: v2
     appVersion: 1.0.12
+    created: "2026-01-07T19:32:04.786967-05:00"
+    description: Arbiter enforces tenant namespace baselines in Kubernetes.
+    digest: 5b22311080a3a16a27480f6a0aa6955616625b041995b26b8aa57fbf93afa521
+    name: arbiter
+    type: application
+    urls:
+    - https://sargent-michael.github.io/Arbiter/arbiter-0.1.19.tgz
+    version: 0.1.19
+  - apiVersion: v2
+    appVersion: 1.0.12
     created: "2026-01-07T16:34:36.588513-05:00"
     description: Arbiter enforces tenant namespace baselines in Kubernetes.
     digest: 1bd6199b104fd528d85ebfc6688c919cc62530cbf8198f9f3081afbcc305e453
@@ -112,6 +122,40 @@ entries:
     - https://sargent-michael.github.io/Arbiter/arbiter-0.1.0.tgz
     version: 0.1.0
   arbiter-stack:
+  - apiVersion: v2
+    appVersion: 1.0.12
+    created: "2026-01-07T19:32:04.8038-05:00"
+    dependencies:
+    - name: arbiter
+      repository: https://sargent-michael.github.io/Arbiter
+      version: 0.1.19
+    - condition: cert-manager.enabled
+      name: cert-manager
+      repository: https://charts.jetstack.io
+      version: 1.15.3
+    - condition: prometheus.enabled
+      name: prometheus
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 25.27.0
+    - condition: grafana.enabled
+      name: grafana
+      repository: https://grafana.github.io/helm-charts
+      version: 8.5.2
+    - condition: loki.enabled
+      name: loki
+      repository: https://grafana.github.io/helm-charts
+      version: 6.16.0
+    - condition: promtail.enabled
+      name: promtail
+      repository: https://grafana.github.io/helm-charts
+      version: 6.16.0
+    description: Arbiter with minimal Prometheus, Grafana, and Loki stack.
+    digest: 521530dd162d9941ab67aa542073f4ab7ea448b1af90cafbfad59079082c5704
+    name: arbiter-stack
+    type: application
+    urls:
+    - https://sargent-michael.github.io/Arbiter/arbiter-stack-0.1.20.tgz
+    version: 0.1.20
   - apiVersion: v2
     appVersion: 1.0.12
     created: "2026-01-07T16:34:36.656947-05:00"
@@ -516,4 +560,4 @@ entries:
     urls:
     - https://sargent-michael.github.io/Arbiter/arbiter-stack-0.1.0.tgz
     version: 0.1.0
-generated: "2026-01-07T16:34:36.584998-05:00"
+generated: "2026-01-07T19:32:04.786692-05:00"
