@@ -41,7 +41,7 @@ helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
   --set arbiter.image.tag=1.0.12 \
-  --version 0.1.20
+  --version 0.1.21
 kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 ```
 
@@ -67,7 +67,7 @@ helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
   --set arbiter.image.tag=1.0.12 \
-  --version 0.1.20
+  --version 0.1.21
 
 kubectl rollout status deploy/arbiter-stack-controller-manager -n arbiter-system
 ```
@@ -85,8 +85,22 @@ helm upgrade --install arbiter-stack arbiter/arbiter-stack \
   --namespace arbiter-system \
   --create-namespace \
   --set arbiter.image.tag=1.0.12 \
-  --version 0.1.20 \
+  --version 0.1.21 \
   --skip-crds
+```
+
+---
+## Standalone Helm Chart (arbiter)
+
+The standalone `arbiter` chart expects cert-manager to already be installed when webhooks are enabled.
+If you want Arbiter without cert-manager, disable both webhook and cert-manager integration:
+
+```bash
+helm upgrade --install arbiter arbiter/arbiter \
+  --namespace arbiter-system \
+  --create-namespace \
+  --set webhook.enabled=false \
+  --set certManager.enabled=false
 ```
 
 ---
