@@ -3,6 +3,16 @@ entries:
   arbiter:
   - apiVersion: v2
     appVersion: 1.0.13
+    created: "2026-01-07T20:08:29.933845-05:00"
+    description: Arbiter enforces tenant namespace baselines in Kubernetes.
+    digest: 391ce41cea3456d87ccda2bdae9dfe493722d8374cd4bd080b84bca547a04ebf
+    name: arbiter
+    type: application
+    urls:
+    - https://sargent-michael.github.io/Arbiter/arbiter-0.1.21.tgz
+    version: 0.1.21
+  - apiVersion: v2
+    appVersion: 1.0.13
     created: "2026-01-07T19:55:48.641351-05:00"
     description: Arbiter enforces tenant namespace baselines in Kubernetes.
     digest: bc3a9557f99733f87563731398c38a46b34d7990f1bdaf84e9c54bfb49b18c51
@@ -638,4 +648,4 @@ entries:
     urls:
     - https://sargent-michael.github.io/Arbiter/arbiter-stack-0.1.0.tgz
     version: 0.1.0
-generated: "2026-01-07T19:55:48.640867-05:00"
+generated: "2026-01-07T20:08:29.933091-05:00"
