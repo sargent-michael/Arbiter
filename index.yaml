@@ -3,7 +3,7 @@ entries:
   arbiter:
   - apiVersion: v2
     appVersion: 1.0.15
-    created: "2026-01-09T16:36:15.43383-05:00"
+    created: "2026-01-09T16:38:38.163367-05:00"
     description: Arbiter enforces tenant namespace baselines in Kubernetes.
     digest: 15bc381c005333da7fa7267c81ffec893006914e278ffd2e6291bedfe10ffb46
     name: arbiter
@@ -212,6 +212,40 @@ entries:
     - https://sargent-michael.github.io/Arbiter/arbiter-0.1.0.tgz
     version: 0.1.0
   arbiter-stack:
+  - apiVersion: v2
+    appVersion: 1.0.15
+    created: "2026-01-09T16:38:38.18323-05:00"
+    dependencies:
+    - name: arbiter
+      repository: https://sargent-michael.github.io/Arbiter
+      version: 0.1.23
+    - condition: cert-manager.enabled
+      name: cert-manager
+      repository: https://charts.jetstack.io
+      version: 1.15.3
+    - condition: prometheus.enabled
+      name: prometheus
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 25.27.0
+    - condition: grafana.enabled
+      name: grafana
+      repository: https://grafana.github.io/helm-charts
+      version: 8.5.2
+    - condition: loki.enabled
+      name: loki
+      repository: https://grafana.github.io/helm-charts
+      version: 6.16.0
+    - condition: promtail.enabled
+      name: promtail
+      repository: https://grafana.github.io/helm-charts
+      version: 6.16.0
+    description: Arbiter with minimal Prometheus, Grafana, and Loki stack.
+    digest: 10653bc2150ec8f49d0e4b379797f0f7d47ddf3fbac93a4cf27bb58b58a06f38
+    name: arbiter-stack
+    type: application
+    urls:
+    - https://sargent-michael.github.io/Arbiter/arbiter-stack-0.1.25.tgz
+    version: 0.1.25
   - apiVersion: v2
     appVersion: 1.0.14
     created: "2026-01-09T16:36:15.712056-05:00"
@@ -896,4 +930,4 @@ entries:
     urls:
     - https://sargent-michael.github.io/Arbiter/arbiter-stack-0.1.0.tgz
     version: 0.1.0
-generated: "2026-01-09T16:36:15.428962-05:00"
+generated: "2026-01-09T16:38:38.162892-05:00"
