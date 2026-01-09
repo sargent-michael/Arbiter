@@ -17,6 +17,62 @@ spec:
   scope: Cluster
   versions:
   - name: v1alpha1
+    additionalPrinterColumns:
+    - jsonPath: .status.defaultsSummary
+      name: Defaults
+      type: string
+    - jsonPath: .spec.baselinePolicy.allowedIngressPorts
+      name: Ingress
+      priority: 1
+      type: string
+    - jsonPath: .spec.baselinePolicy.resourceQuotaSpec.hard["requests.cpu"]
+      name: ReqCPU
+      priority: 1
+      type: string
+    - jsonPath: .spec.baselinePolicy.resourceQuotaSpec.hard["requests.memory"]
+      name: ReqMem
+      priority: 1
+      type: string
+    - jsonPath: .spec.baselinePolicy.resourceQuotaSpec.hard["limits.cpu"]
+      name: LimCPU
+      priority: 1
+      type: string
+    - jsonPath: .spec.baselinePolicy.resourceQuotaSpec.hard["limits.memory"]
+      name: LimMem
+      priority: 1
+      type: string
+    - jsonPath: .spec.baselinePolicy.resourceQuotaSpec.hard.pods
+      name: Pods
+      priority: 1
+      type: string
+    - jsonPath: .spec.baselinePolicy.storageQuotaSpec.hard.persistentvolumeclaims
+      name: PVCs
+      priority: 1
+      type: string
+    - jsonPath: .spec.baselinePolicy.storageQuotaSpec.hard["requests.storage"]
+      name: Storage
+      priority: 1
+      type: string
+    - jsonPath: .spec.baselinePolicy.limitRangeSpec.limits[0].defaultRequest.cpu
+      name: LRReqCPU
+      priority: 1
+      type: string
+    - jsonPath: .spec.baselinePolicy.limitRangeSpec.limits[0].defaultRequest.memory
+      name: LRReqMem
+      priority: 1
+      type: string
+    - jsonPath: .spec.baselinePolicy.limitRangeSpec.limits[0].default.cpu
+      name: LRLimCPU
+      priority: 1
+      type: string
+    - jsonPath: .spec.baselinePolicy.limitRangeSpec.limits[0].default.memory
+      name: LRLimMem
+      priority: 1
+      type: string
+    - jsonPath: .spec.baselinePolicy.networkIsolation
+      name: Net
+      priority: 1
+      type: boolean
     schema:
       openAPIV3Schema:
         properties:
@@ -282,6 +338,9 @@ spec:
           status:
             description: BaselineStatus defines the observed state of Baseline.
             properties:
+              defaultsSummary:
+                description: defaultsSummary is a human-friendly summary of baseline defaults.
+                type: string
               conditions:
                 items:
                   description: Condition contains details for one aspect of the current

@@ -33,6 +33,22 @@ rules:
 - apiGroups:
   - project-arbiter.io
   resources:
+  - baselines
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - project-arbiter.io
+  resources:
+  - baselines/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - project-arbiter.io
+  resources:
   - occupants
   verbs:
   - create

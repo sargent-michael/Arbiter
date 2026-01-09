@@ -8,6 +8,7 @@ spec:
     networkIsolation: true
     resourceQuota: true
     limitRange: true
+    storageQuota: true
     allowedIngressPorts:
       - 443
     resourceQuotaSpec:
@@ -17,6 +18,10 @@ spec:
         limits.cpu: "4"
         limits.memory: 8Gi
         pods: "50"
+    storageQuotaSpec:
+      hard:
+        persistentvolumeclaims: "10"
+        requests.storage: 100Gi
     limitRangeSpec:
       limits:
         - type: Container

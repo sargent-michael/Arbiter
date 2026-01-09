@@ -242,7 +242,8 @@ func (r *OccupantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 		adjustedPolicy = disableBaselinePolicy(policy)
 	}
 
-	enabledCapabilities := resolveCapabilities(&occ, adjustedPolicy)
+	statusPolicy := policy
+	enabledCapabilities := resolveCapabilities(&occ, statusPolicy)
 	obsEnabled := hasCapability(enabledCapabilities, "obs")
 	obsProvider := strings.TrimSpace(occ.Spec.ExternalIntegrations.Observability)
 
@@ -280,10 +281,10 @@ func (r *OccupantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 	occ.Status.Namespaces = append([]string{}, allNamespaces...)
 	sort.Strings(occ.Status.Namespaces)
 	occ.Status.NamespacesSummary = summarizeNamespaces(managedNamespaces, adoptedNamespaces)
-	occ.Status.ResourceQuotaSummary = summarizeResourceQuota(adjustedPolicy)
-	occ.Status.StorageQuotaSummary = summarizeStorageQuota(adjustedPolicy)
-	occ.Status.LimitRangeSummary = summarizeLimitRange(adjustedPolicy)
-	occ.Status.NetworkPolicySummary = summarizeNetworkPolicy(adjustedPolicy)
+	occ.Status.ResourceQuotaSummary = summarizeResourceQuota(statusPolicy)
+	occ.Status.StorageQuotaSummary = summarizeStorageQuota(statusPolicy)
+	occ.Status.LimitRangeSummary = summarizeLimitRange(statusPolicy)
+	occ.Status.NetworkPolicySummary = summarizeNetworkPolicy(statusPolicy)
 	occ.Status.EnabledCapabilities = enabledCapabilities
 	occ.Status.CapabilitiesSummary = summarizeCapabilities(occ.Status.EnabledCapabilities)
 	occ.Status.IdentityBindings = summarizeIdentityBindings(occ.Spec.AdminSubjects)
@@ -1091,13 +1092,17 @@ func (r *OccupantReconciler) getBaseline(ctx context.Context) (*platformv1alpha1
 	}
 	for i := range list.Items {
 		if list.Items[i].Name == defaultBaselineName {
-			return &list.Items[i], nil
+			baseline := &list.Items[i]
+			r.ensureBaselineDefaultsSummary(ctx, baseline)
+			return baseline, nil
 		}
 	}
 	sort.SliceStable(list.Items, func(i, j int) bool {
 		return list.Items[i].Name < list.Items[j].Name
 	})
-	return &list.Items[0], nil
+	baseline := &list.Items[0]
+	r.ensureBaselineDefaultsSummary(ctx, baseline)
+	return baseline, nil
 }
 
 func mergeBaselinePolicy(base platformv1alpha1.BaselinePolicy, override platformv1alpha1.BaselinePolicy) platformv1alpha1.BaselinePolicy {
@@ -1151,7 +1156,7 @@ func normalizeBaselinePolicy(policy platformv1alpha1.BaselinePolicy, defaultEnab
 		policy.LimitRange = boolPtr(defaultEnabled)
 	}
 	if policy.StorageQuota == nil {
-		policy.StorageQuota = boolPtr(false)
+		policy.StorageQuota = boolPtr(defaultEnabled)
 	}
 
 	if policy.NetworkIsolation != nil && *policy.NetworkIsolation && len(policy.AllowedIngressPorts) == 0 {
@@ -1486,6 +1491,32 @@ func summarizeNetworkPolicy(policy platformv1alpha1.BaselinePolicy) string {
 	}
 	sort.Strings(ports)
 	return fmt.Sprintf("ingress:%s", strings.Join(ports, ","))
+}
+
+func summarizeBaselineDefaults(policy platformv1alpha1.BaselinePolicy) string {
+	parts := []string{
+		fmt.Sprintf("net:%s", summarizeNetworkPolicy(policy)),
+		fmt.Sprintf("quota:%s", summarizeResourceQuota(policy)),
+		fmt.Sprintf("storage:%s", summarizeStorageQuota(policy)),
+		fmt.Sprintf("limits:%s", summarizeLimitRange(policy)),
+	}
+	return strings.Join(parts, " ")
+}
+
+func (r *OccupantReconciler) ensureBaselineDefaultsSummary(ctx context.Context, baseline *platformv1alpha1.Baseline) {
+	if baseline == nil {
+		return
+	}
+	policy := normalizeBaselinePolicy(baseline.Spec.BaselinePolicy, true)
+	summary := summarizeBaselineDefaults(policy)
+	if baseline.Status.DefaultsSummary == summary {
+		return
+	}
+	original := baseline.DeepCopy()
+	baseline.Status.DefaultsSummary = summary
+	if err := r.Status().Patch(ctx, baseline, client.MergeFrom(original)); err != nil {
+		logf.FromContext(ctx).Error(err, "failed to update baseline defaults summary", "baseline", baseline.Name)
+	}
 }
 
 func resourceString(list corev1.ResourceList, name corev1.ResourceName) string {
