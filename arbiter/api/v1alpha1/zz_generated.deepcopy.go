@@ -103,6 +103,11 @@ func (in *BaselinePolicy) DeepCopyInto(out *BaselinePolicy) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.StorageQuota != nil {
+		in, out := &in.StorageQuota, &out.StorageQuota
+		*out = new(bool)
+		**out = **in
+	}
 	if in.ResourceQuotaSpec != nil {
 		in, out := &in.ResourceQuotaSpec, &out.ResourceQuotaSpec
 		*out = new(corev1.ResourceQuotaSpec)
@@ -111,6 +116,11 @@ func (in *BaselinePolicy) DeepCopyInto(out *BaselinePolicy) {
 	if in.LimitRangeSpec != nil {
 		in, out := &in.LimitRangeSpec, &out.LimitRangeSpec
 		*out = new(corev1.LimitRangeSpec)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.StorageQuotaSpec != nil {
+		in, out := &in.StorageQuotaSpec, &out.StorageQuotaSpec
+		*out = new(corev1.ResourceQuotaSpec)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.AllowedIngressPorts != nil {

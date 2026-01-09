@@ -281,6 +281,7 @@ func (r *OccupantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 	sort.Strings(occ.Status.Namespaces)
 	occ.Status.NamespacesSummary = summarizeNamespaces(managedNamespaces, adoptedNamespaces)
 	occ.Status.ResourceQuotaSummary = summarizeResourceQuota(adjustedPolicy)
+	occ.Status.StorageQuotaSummary = summarizeStorageQuota(adjustedPolicy)
 	occ.Status.LimitRangeSummary = summarizeLimitRange(adjustedPolicy)
 	occ.Status.NetworkPolicySummary = summarizeNetworkPolicy(adjustedPolicy)
 	occ.Status.EnabledCapabilities = enabledCapabilities
@@ -418,6 +419,15 @@ func (r *OccupantReconciler) reconcileNamespace(
 
 	if policy.ResourceQuota != nil && *policy.ResourceQuota {
 		changed, err = r.ensureResourceQuota(ctx, occ, nsName, policy)
+		if err != nil {
+			return drift, err
+		}
+		if changed {
+			drift++
+		}
+	}
+	if policy.StorageQuota != nil && *policy.StorageQuota {
+		changed, err = r.ensureStorageQuota(ctx, occ, nsName, policy)
 		if err != nil {
 			return drift, err
 		}
@@ -649,6 +659,35 @@ func (r *OccupantReconciler) ensureResourceQuota(ctx context.Context, occ *platf
 	return false, nil
 }
 
+func (r *OccupantReconciler) ensureStorageQuota(ctx context.Context, occ *platformv1alpha1.Occupant, ns string, policy platformv1alpha1.BaselinePolicy) (bool, error) {
+	name := occupantResourceName(occ.Spec.OccupantID, "storage-quota")
+	desiredSpec := defaultStorageQuotaSpec()
+	if policy.StorageQuotaSpec != nil {
+		desiredSpec = *policy.StorageQuotaSpec
+	}
+
+	var rq corev1.ResourceQuota
+	err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: ns}, &rq)
+	if apierrors.IsNotFound(err) {
+		rq = corev1.ResourceQuota{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
+			Spec:       desiredSpec,
+		}
+		if err := ctrl.SetControllerReference(occ, &rq, r.Scheme); err != nil {
+			return false, err
+		}
+		return true, r.Create(ctx, &rq)
+	}
+	if err != nil {
+		return false, err
+	}
+	if !reflect.DeepEqual(rq.Spec, desiredSpec) {
+		rq.Spec = desiredSpec
+		return true, r.Update(ctx, &rq)
+	}
+	return false, nil
+}
+
 func (r *OccupantReconciler) ensureLimitRange(ctx context.Context, occ *platformv1alpha1.Occupant, ns string, policy platformv1alpha1.BaselinePolicy) (bool, error) {
 	name := occupantResourceName(occ.Spec.OccupantID, "limits")
 	desiredSpec := defaultLimitRangeSpec()
@@ -777,6 +816,15 @@ func defaultResourceQuotaSpec() corev1.ResourceQuotaSpec {
 	}
 }
 
+func defaultStorageQuotaSpec() corev1.ResourceQuotaSpec {
+	return corev1.ResourceQuotaSpec{
+		Hard: corev1.ResourceList{
+			corev1.ResourcePersistentVolumeClaims: resourceMustParse("10"),
+			corev1.ResourceRequestsStorage:        resourceMustParse("100Gi"),
+		},
+	}
+}
+
 func defaultLimitRangeSpec() corev1.LimitRangeSpec {
 	return corev1.LimitRangeSpec{
 		Limits: []corev1.LimitRangeItem{
@@ -819,6 +867,13 @@ func (r *OccupantReconciler) ensureNetworkPolicy(ctx context.Context, owner clie
 func (r *OccupantReconciler) cleanupBaselineResources(ctx context.Context, occupantID, ns string) (int32, error) {
 	var drift int32
 	for _, name := range baselineResourceQuotaNames(occupantID) {
+		if deleted, err := r.deleteResourceQuota(ctx, name, ns); err != nil {
+			return drift, err
+		} else if deleted {
+			drift++
+		}
+	}
+	for _, name := range baselineStorageQuotaNames(occupantID) {
 		if deleted, err := r.deleteResourceQuota(ctx, name, ns); err != nil {
 			return drift, err
 		} else if deleted {
@@ -871,6 +926,12 @@ func (r *OccupantReconciler) cleanupLegacyBaselineResources(ctx context.Context,
 func baselineResourceQuotaNames(occupantID string) []string {
 	return []string{
 		occupantResourceName(occupantID, "quota"),
+	}
+}
+
+func baselineStorageQuotaNames(occupantID string) []string {
+	return []string{
+		occupantResourceName(occupantID, "storage-quota"),
 	}
 }
 
@@ -1049,11 +1110,17 @@ func mergeBaselinePolicy(base platformv1alpha1.BaselinePolicy, override platform
 	if override.LimitRange != nil {
 		base.LimitRange = override.LimitRange
 	}
+	if override.StorageQuota != nil {
+		base.StorageQuota = override.StorageQuota
+	}
 	if override.ResourceQuotaSpec != nil {
 		base.ResourceQuotaSpec = override.ResourceQuotaSpec
 	}
 	if override.LimitRangeSpec != nil {
 		base.LimitRangeSpec = override.LimitRangeSpec
+	}
+	if override.StorageQuotaSpec != nil {
+		base.StorageQuotaSpec = override.StorageQuotaSpec
 	}
 	if len(override.AllowedIngressPorts) > 0 {
 		base.AllowedIngressPorts = append([]int32{}, override.AllowedIngressPorts...)
@@ -1071,6 +1138,9 @@ func normalizeBaselinePolicy(policy platformv1alpha1.BaselinePolicy, defaultEnab
 	if policy.LimitRange == nil && policy.LimitRangeSpec != nil {
 		policy.LimitRange = boolPtr(true)
 	}
+	if policy.StorageQuota == nil && policy.StorageQuotaSpec != nil {
+		policy.StorageQuota = boolPtr(true)
+	}
 	if policy.NetworkIsolation == nil {
 		policy.NetworkIsolation = boolPtr(defaultEnabled)
 	}
@@ -1079,6 +1149,9 @@ func normalizeBaselinePolicy(policy platformv1alpha1.BaselinePolicy, defaultEnab
 	}
 	if policy.LimitRange == nil {
 		policy.LimitRange = boolPtr(defaultEnabled)
+	}
+	if policy.StorageQuota == nil {
+		policy.StorageQuota = boolPtr(false)
 	}
 
 	if policy.NetworkIsolation != nil && *policy.NetworkIsolation && len(policy.AllowedIngressPorts) == 0 {
@@ -1092,6 +1165,10 @@ func normalizeBaselinePolicy(policy platformv1alpha1.BaselinePolicy, defaultEnab
 		spec := defaultLimitRangeSpec()
 		policy.LimitRangeSpec = &spec
 	}
+	if policy.StorageQuota != nil && *policy.StorageQuota && policy.StorageQuotaSpec == nil {
+		spec := defaultStorageQuotaSpec()
+		policy.StorageQuotaSpec = &spec
+	}
 	return policy
 }
 
@@ -1103,8 +1180,10 @@ func isPolicyEmpty(policy platformv1alpha1.BaselinePolicy) bool {
 	return policy.NetworkIsolation == nil &&
 		policy.ResourceQuota == nil &&
 		policy.LimitRange == nil &&
+		policy.StorageQuota == nil &&
 		policy.ResourceQuotaSpec == nil &&
 		policy.LimitRangeSpec == nil &&
+		policy.StorageQuotaSpec == nil &&
 		len(policy.AllowedIngressPorts) == 0
 }
 
@@ -1177,6 +1256,7 @@ func disableBaselinePolicy(policy platformv1alpha1.BaselinePolicy) platformv1alp
 	disabled.NetworkIsolation = boolPtr(false)
 	disabled.ResourceQuota = boolPtr(false)
 	disabled.LimitRange = boolPtr(false)
+	disabled.StorageQuota = boolPtr(false)
 	return disabled
 }
 
@@ -1247,6 +1327,9 @@ func resolveCapabilities(occ *platformv1alpha1.Occupant, policy platformv1alpha1
 	if policy.NetworkIsolation != nil && *policy.NetworkIsolation {
 		add("net")
 	}
+	if policy.StorageQuota != nil && *policy.StorageQuota {
+		add("storage")
+	}
 	if occ.Spec.ExternalIntegrations.Observability != "" {
 		add("obs")
 	}
@@ -1258,7 +1341,7 @@ func resolveCapabilities(occ *platformv1alpha1.Occupant, policy platformv1alpha1
 	}
 
 	ordered := []string{}
-	preferred := []string{"rbac", "net", "obs", "ci", "cost"}
+	preferred := []string{"rbac", "net", "storage", "obs", "ci", "cost"}
 	for _, capName := range preferred {
 		if _, ok := capSet[capName]; ok {
 			ordered = append(ordered, capName)
@@ -1358,6 +1441,20 @@ func summarizeResourceQuota(policy platformv1alpha1.BaselinePolicy) string {
 		resourceString(spec.Hard, corev1.ResourceRequestsMemory),
 		resourceString(spec.Hard, corev1.ResourceLimitsMemory),
 		resourceString(spec.Hard, corev1.ResourcePods),
+	)
+}
+
+func summarizeStorageQuota(policy platformv1alpha1.BaselinePolicy) string {
+	if policy.StorageQuota == nil || !*policy.StorageQuota {
+		return "disabled"
+	}
+	if policy.StorageQuotaSpec == nil {
+		return "default"
+	}
+	spec := policy.StorageQuotaSpec
+	return fmt.Sprintf("pvc:%s storage:%s",
+		resourceString(spec.Hard, corev1.ResourcePersistentVolumeClaims),
+		resourceString(spec.Hard, corev1.ResourceRequestsStorage),
 	)
 }
 

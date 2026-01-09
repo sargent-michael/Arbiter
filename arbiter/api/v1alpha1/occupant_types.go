@@ -99,6 +99,10 @@ type BaselinePolicy struct {
 	// +optional
 	LimitRange *bool `json:"limitRange,omitempty"`
 
+	// apply default storage ResourceQuota for PVCs and storage requests.
+	// +optional
+	StorageQuota *bool `json:"storageQuota,omitempty"`
+
 	// resourceQuotaSpec overrides the default ResourceQuota spec when set.
 	// +optional
 	ResourceQuotaSpec *corev1.ResourceQuotaSpec `json:"resourceQuotaSpec,omitempty"`
@@ -106,6 +110,10 @@ type BaselinePolicy struct {
 	// limitRangeSpec overrides the default LimitRange spec when set.
 	// +optional
 	LimitRangeSpec *corev1.LimitRangeSpec `json:"limitRangeSpec,omitempty"`
+
+	// storageQuotaSpec overrides the default storage ResourceQuota spec when set.
+	// +optional
+	StorageQuotaSpec *corev1.ResourceQuotaSpec `json:"storageQuotaSpec,omitempty"`
 
 	// allowedIngressPorts overrides the default allowed ingress ports (TCP).
 	// If empty, defaults to [443].
@@ -180,6 +188,10 @@ type OccupantStatus struct {
 	// resourceQuotaSummary is a human-friendly summary of enforced quota.
 	// +optional
 	ResourceQuotaSummary string `json:"resourceQuotaSummary,omitempty"`
+
+	// storageQuotaSummary is a human-friendly summary of enforced storage quota.
+	// +optional
+	StorageQuotaSummary string `json:"storageQuotaSummary,omitempty"`
 
 	// limitRangeSummary is a human-friendly summary of enforced limits.
 	// +optional
